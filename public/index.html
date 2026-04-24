@@ -701,8 +701,8 @@ function previewImage(src) {
   document.getElementById('imgOverlay').classList.add('show');
 }
 
-// ─── Poll for messages every 15 seconds ─────
-setInterval(function() { if (currentTN) loadAllMessages(); }, 15000);
+// ─── Poll for messages every 5 seconds for fast updates ─────
+setInterval(function() { if (currentTN) loadAllMessages(); }, 5000);
 </script>
 </body>
 </html>

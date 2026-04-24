@@ -416,13 +416,23 @@ async function sendAdminMsg() {
   if (!text && !pendingFile) return;
   const body = { text };
   if (pendingFile) { body.fileName = pendingFile.name; body.fileData = pendingFile.data; body.fileType = pendingFile.type; }
-  await apiFetch(`/api/shipments/${currentChatShipment.id}/chat`, { method: 'POST', body: JSON.stringify(body) });
-  input.value = '';
-  pendingFile = null;
-  // Reload
+  try {
+    const result = await apiFetch(`/api/shipments/${currentChatShipment.id}/chat`, { method: 'POST', body: JSON.stringify(body) });
+    console.log('Admin send result:', result);
+    input.value = '';
+    pendingFile = null;
+    // Reload messages immediately
+    await refreshChat();
+  } catch(err) { console.error('Failed to send admin message:', err); alert('Failed to send message. Please try again.'); }
+}
+
+async function refreshChat() {
   shipments = await apiFetch('/api/shipments');
-  currentChatShipment = shipments.find(s => s.id === currentChatShipment.id);
-  renderMessages(currentChatShipment.messages || []);
+  renderStats(); renderTable(); updateUnreadBadge();
+  if (currentChatShipment) {
+    currentChatShipment = shipments.find(s => s.id === currentChatShipment.id);
+    if (currentChatShipment) renderMessages(currentChatShipment.messages || []);
+  }
 }
 
 function handleFileSelect(e) {
@@ -465,8 +475,16 @@ function startGPS(){if(!navigator.geolocation){alert('Geolocation not supported'
 
 function stopGPS(){if(gpsWatchId!==null){navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;}document.getElementById('gpsStartBtn').classList.remove('hidden');document.getElementById('gpsStopBtn').classList.add('hidden');document.getElementById('gpsDot').classList.remove('active');document.getElementById('gpsLabel').textContent='GPS Inactive';}
 
-// Poll for new messages every 10 seconds
-setInterval(()=>{if(authToken)loadShipments().then(()=>{if(currentChatShipment){currentChatShipment=shipments.find(s=>s.id===currentChatShipment.id);if(currentChatShipment)renderMessages(currentChatShipment.messages||[]);}});},10000);
+// Auto-refresh: 3 seconds when in chat, 8 seconds otherwise
+setInterval(function(){
+  if (!authToken) return;
+  loadShipments().then(function(){
+    if (currentChatShipment) {
+      currentChatShipment = shipments.find(s => s.id === currentChatShipment.id);
+      if (currentChatShipment) renderMessages(currentChatShipment.messages || []);
+    }
+  }).catch(function(err){ console.error('Poll error:', err); });
+}, 3000);
 </script>
 </body>
 </html>

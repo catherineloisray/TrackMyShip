@@ -84,7 +84,14 @@ function serveFile(filePath, res) {
   const ext = path.extname(filePath).toLowerCase();
   fs.readFile(filePath, (err, data) => {
     if (err) { res.writeHead(404); res.end('Not Found'); return; }
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream' };
+    // Prevent browser caching of HTML files so updates deploy instantly
+    if (ext === '.html') {
+      headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      headers['Pragma'] = 'no-cache';
+      headers['Expires'] = '0';
+    }
+    res.writeHead(200, headers);
     res.end(data);
   });
 }
@@ -133,6 +140,7 @@ function parseURL(req) {
 //  SINGLE SERVER
 // ═══════════════════════════════════════════════════════════════════
 const server = http.createServer(async (req, res) => {
+  try {
   cors(res);
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
@@ -194,23 +202,24 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/chat/send' && req.method === 'POST') {
     const body = await parseBody(req);
     const tn = (body.trackingNumber || '').trim().toUpperCase();
+    console.log('[CHAT] Client sending message to:', tn, '| text length:', (body.text||'').length, '| hasFile:', !!body.fileData);
     const shipments = loadShipments();
     const idx = shipments.findIndex(s => s.trackingNumber === tn);
-    if (idx === -1) return jsonRes(res, 404, { error: 'Shipment not found' });
+    if (idx === -1) { console.log('[CHAT] ERROR: Shipment not found for', tn); return jsonRes(res, 404, { error: 'Shipment not found' }); }
     if (!shipments[idx].messages) shipments[idx].messages = [];
     const msg = {
       id: crypto.randomUUID(),
       sender: 'client',
       text: encryptMessage(body.text || '', tn),
       fileName: body.fileName || null,
-      fileData: body.fileData || null, // base64 encoded file
+      fileData: body.fileData || null,
       fileType: body.fileType || null,
       timestamp: new Date().toISOString(),
       read: false
     };
     shipments[idx].messages.push(msg);
     saveShipments(shipments);
-    // Broadcast to SSE (send decrypted for live view)
+    console.log('[CHAT] Client message saved. Total messages:', shipments[idx].messages.length);
     broadcastToTracking(tn, {
       type: 'new_message',
       message: { ...msg, text: body.text || '' }
@@ -223,11 +232,12 @@ const server = http.createServer(async (req, res) => {
     const tn = (query.tn || '').trim().toUpperCase();
     const shipments = loadShipments();
     const shipment = shipments.find(s => s.trackingNumber === tn);
-    if (!shipment) return jsonRes(res, 404, { error: 'Not found' });
+    if (!shipment) { console.log('[CHAT] GET messages: shipment not found for', tn); return jsonRes(res, 404, { error: 'Not found' }); }
     const messages = (shipment.messages || []).map(m => ({
       ...m,
       text: decryptMessage(m.text, tn)
     }));
+    console.log('[CHAT] Returning', messages.length, 'messages for', tn);
     return jsonRes(res, 200, messages);
   }
 
@@ -312,9 +322,10 @@ const server = http.createServer(async (req, res) => {
     const parts = pathname.replace(ADMIN_PATH, '').split('/');
     const id = parts[3];
     const body = await parseBody(req);
+    console.log('[CHAT] Admin sending message to shipment:', id, '| text length:', (body.text||'').length, '| hasFile:', !!body.fileData);
     const shipments = loadShipments();
     const idx = shipments.findIndex(s => s.id === id);
-    if (idx === -1) return jsonRes(res, 404, { error: 'Not found' });
+    if (idx === -1) { console.log('[CHAT] ERROR: Shipment not found for id', id); return jsonRes(res, 404, { error: 'Not found' }); }
     if (!shipments[idx].messages) shipments[idx].messages = [];
     const tn = shipments[idx].trackingNumber;
     const msg = {
@@ -329,6 +340,7 @@ const server = http.createServer(async (req, res) => {
     };
     shipments[idx].messages.push(msg);
     saveShipments(shipments);
+    console.log('[CHAT] Admin message saved for', tn, '| Total messages:', shipments[idx].messages.length);
     broadcastToTracking(tn, {
       type: 'new_message',
       message: { ...msg, text: body.text || '' }
@@ -441,6 +453,11 @@ const server = http.createServer(async (req, res) => {
 
   let filePath = pathname === '/' ? '/index.html' : pathname;
   serveFile(path.join(__dirname, 'public', filePath), res);
+
+  } catch (err) {
+    console.error('Server error:', err);
+    if (!res.headersSent) { res.writeHead(500); res.end(JSON.stringify({ error: 'Internal server error' })); }
+  }
 });
 
 // ─── Start server ────────────────────────────────────────────────
