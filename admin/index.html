@@ -10,7 +10,6 @@
 :root{--primary:#0a2463;--primary-light:#1e3a8a;--accent:#3b82f6;--success:#10b981;--warning:#f59e0b;--danger:#ef4444;--bg:#0f172a;--surface:#1e293b;--surface2:#334155;--text:#f1f5f9;--text-dim:#94a3b8;--border:#475569;--radius:10px}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-/* ─── Login Screen ──── */
 .login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0a2463 0%,#1e3a8a 50%,#0f172a 100%)}
 .login-box{background:var(--surface);padding:48px;border-radius:16px;width:420px;box-shadow:0 25px 60px rgba(0,0,0,.5)}
 .login-box h1{font-size:28px;margin-bottom:8px;color:var(--accent)}
@@ -28,14 +27,14 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .btn-sm{padding:8px 14px;font-size:13px}
 .btn-block{width:100%;justify-content:center}
 .error-msg{color:var(--danger);font-size:13px;margin-top:8px}
-/* ─── Dashboard ──── */
 .dashboard{display:none}
 .sidebar{position:fixed;left:0;top:0;width:260px;height:100vh;background:var(--primary);padding:24px 0;overflow-y:auto;z-index:100}
 .sidebar .brand{padding:0 24px 24px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:16px}
 .sidebar .brand h2{color:#fff;font-size:20px}.sidebar .brand span{color:var(--accent);font-size:13px}
-.sidebar nav a{display:flex;align-items:center;gap:12px;padding:12px 24px;color:rgba(255,255,255,.7);text-decoration:none;font-size:14px;transition:all .2s}
+.sidebar nav a{display:flex;align-items:center;gap:12px;padding:12px 24px;color:rgba(255,255,255,.7);text-decoration:none;font-size:14px;transition:all .2s;position:relative}
 .sidebar nav a:hover,.sidebar nav a.active{background:rgba(255,255,255,.1);color:#fff}
 .sidebar nav a svg{width:20px;height:20px}
+.nav-badge{position:absolute;right:16px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;min-width:20px;text-align:center}
 .main{margin-left:260px;padding:24px 32px}
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;padding-bottom:16px;border-bottom:1px solid var(--border)}
 .topbar h1{font-size:24px}
@@ -43,12 +42,10 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .topbar .gps-dot{width:10px;height:10px;border-radius:50%;background:var(--danger)}
 .topbar .gps-dot.active{background:var(--success);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-/* Stats */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:32px}
 .stat-card{background:var(--surface);padding:24px;border-radius:var(--radius);border-left:4px solid var(--accent)}
 .stat-card.green{border-left-color:var(--success)}.stat-card.yellow{border-left-color:var(--warning)}.stat-card.red{border-left-color:var(--danger)}
 .stat-card h3{font-size:32px;margin-bottom:4px}.stat-card p{color:var(--text-dim);font-size:13px;text-transform:uppercase;letter-spacing:1px}
-/* Table */
 .table-wrap{background:var(--surface);border-radius:var(--radius);overflow:hidden;margin-bottom:32px}
 .table-header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--border)}
 .table-header h2{font-size:18px}
@@ -61,14 +58,12 @@ tr:hover td{background:rgba(255,255,255,.03)}
 .badge-green{background:rgba(16,185,129,.15);color:var(--success)}
 .badge-yellow{background:rgba(245,158,11,.15);color:var(--warning)}
 .badge-red{background:rgba(239,68,68,.15);color:var(--danger)}
-/* Modal */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center}
 .modal-overlay.show{display:flex}
 .modal{background:var(--surface);border-radius:16px;width:680px;max-height:90vh;overflow-y:auto;padding:32px;box-shadow:0 25px 60px rgba(0,0,0,.5)}
 .modal h2{margin-bottom:24px;font-size:22px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .modal-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;padding-top:16px;border-top:1px solid var(--border)}
-/* GPS Map */
 #adminMap{height:200px;border-radius:var(--radius);margin-bottom:16px}
 .gps-panel{background:var(--surface);padding:24px;border-radius:var(--radius);margin-bottom:32px}
 .gps-panel h2{margin-bottom:16px;font-size:18px}
@@ -79,37 +74,51 @@ tr:hover td{background:rgba(255,255,255,.03)}
 .copy-btn{background:none;border:1px solid var(--border);color:var(--text-dim);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px;margin-left:8px}
 .copy-btn:hover{border-color:var(--accent);color:var(--accent)}
 .hidden{display:none!important}
+/* ─── Chat Styles ──── */
+.chat-list{display:grid;gap:16px}
+.chat-card{background:var(--surface);border-radius:var(--radius);padding:20px;cursor:pointer;transition:all .2s;border:1px solid transparent;display:flex;justify-content:space-between;align-items:center}
+.chat-card:hover{border-color:var(--accent);background:rgba(59,130,246,.05)}
+.chat-card-info h3{font-size:15px;margin-bottom:4px}.chat-card-info p{font-size:13px;color:var(--text-dim)}
+.chat-card .unread{background:var(--danger);color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.chat-container{background:var(--surface);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;height:calc(100vh - 160px)}
+.chat-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.chat-header h3{font-size:16px}
+.chat-header .e2e-badge{font-size:11px;color:var(--success);display:flex;align-items:center;gap:4px}
+.chat-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
+.chat-msg{max-width:75%;padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.5;word-wrap:break-word}
+.chat-msg.admin{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.chat-msg.client{background:var(--surface2);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px}
+.chat-msg .msg-time{font-size:11px;opacity:.6;margin-top:4px;display:block}
+.chat-msg .msg-file{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 12px;background:rgba(0,0,0,.2);border-radius:8px;font-size:13px;cursor:pointer;text-decoration:none;color:inherit}
+.chat-msg .msg-file:hover{background:rgba(0,0,0,.3)}
+.chat-msg .file-img{max-width:240px;max-height:180px;border-radius:8px;margin-top:8px;cursor:pointer}
+.chat-input{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center}
+.chat-input input[type="text"]{flex:1;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;outline:none}
+.chat-input input[type="text"]:focus{border-color:var(--accent)}
+.chat-input button{padding:12px 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-weight:600;cursor:pointer;font-size:14px}
+.chat-input button:hover{background:#2563eb}
+.chat-input .attach-btn{padding:10px;background:var(--surface2);border:none;border-radius:var(--radius);cursor:pointer;color:var(--text-dim);display:flex;align-items:center}
+.chat-input .attach-btn:hover{background:var(--border);color:var(--text)}
+.chat-input input[type="file"]{display:none}
 </style>
 </head>
 <body>
 
-<!-- ═══ LOGIN SCREEN ═══ -->
 <div class="login-screen" id="loginScreen">
   <div class="login-box">
     <span class="logo">📦</span>
     <h1>TrackMyShip Admin</h1>
     <p>Secure admin portal — authorized personnel only</p>
-    <div class="form-group">
-      <label>Username</label>
-      <input type="text" id="loginUser" placeholder="Enter username" autocomplete="off">
-    </div>
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="loginPass" placeholder="Enter password">
-    </div>
+    <div class="form-group"><label>Username</label><input type="text" id="loginUser" placeholder="Enter username" autocomplete="off"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="loginPass" placeholder="Enter password"></div>
     <div class="error-msg" id="loginError"></div>
     <button class="btn btn-primary btn-block" onclick="doLogin()" style="margin-top:16px">Sign In</button>
   </div>
 </div>
 
-<!-- ═══ DASHBOARD ═══ -->
 <div class="dashboard" id="dashboard">
-  <!-- Sidebar -->
   <div class="sidebar">
-    <div class="brand">
-      <h2>📦 TrackMyShip</h2>
-      <span>Admin Dashboard</span>
-    </div>
+    <div class="brand"><h2>📦 TrackMyShip</h2><span>Admin Dashboard</span></div>
     <nav>
       <a href="#" class="active" onclick="showSection('overview')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
@@ -118,6 +127,11 @@ tr:hover td{background:rgba(255,255,255,.03)}
       <a href="#" onclick="showSection('newShipment')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         New Shipment
+      </a>
+      <a href="#" onclick="showSection('messages')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        Messages
+        <span class="nav-badge hidden" id="totalUnread">0</span>
       </a>
       <a href="#" onclick="showSection('gps')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -131,16 +145,12 @@ tr:hover td{background:rgba(255,255,255,.03)}
   </div>
 
   <div class="main">
-    <!-- Topbar -->
     <div class="topbar">
       <h1 id="pageTitle">Overview</h1>
-      <div class="gps-status">
-        <div class="gps-dot" id="gpsDot"></div>
-        <span id="gpsLabel">GPS Inactive</span>
-      </div>
+      <div class="gps-status"><div class="gps-dot" id="gpsDot"></div><span id="gpsLabel">GPS Inactive</span></div>
     </div>
 
-    <!-- ═══ OVERVIEW SECTION ═══ -->
+    <!-- OVERVIEW -->
     <div id="sectionOverview">
       <div class="stats">
         <div class="stat-card"><h3 id="statTotal">0</h3><p>Total Shipments</p></div>
@@ -149,69 +159,88 @@ tr:hover td{background:rgba(255,255,255,.03)}
         <div class="stat-card red"><h3 id="statPending">0</h3><p>Picked Up</p></div>
       </div>
       <div class="table-wrap">
-        <div class="table-header">
-          <h2>All Shipments</h2>
-          <button class="btn btn-primary btn-sm" onclick="showSection('newShipment')">+ New Shipment</button>
-        </div>
+        <div class="table-header"><h2>All Shipments</h2><button class="btn btn-primary btn-sm" onclick="showSection('newShipment')">+ New Shipment</button></div>
         <table>
-          <thead><tr><th>Tracking #</th><th>Receiver</th><th>Destination</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Tracking #</th><th>Receiver</th><th>Destination</th><th>Status</th><th>Chat</th><th>Actions</th></tr></thead>
           <tbody id="shipmentsTable"></tbody>
         </table>
       </div>
     </div>
 
-    <!-- ═══ NEW SHIPMENT SECTION ═══ -->
+    <!-- NEW SHIPMENT -->
     <div id="sectionNewShipment" class="hidden">
-      <div class="modal" style="max-width:100%;width:100%;box-shadow:none;padding:0;background:transparent">
-        <div style="background:var(--surface);padding:32px;border-radius:var(--radius)">
-          <h2>Create New Shipment</h2>
-          <form id="shipmentForm" onsubmit="createShipment(event)">
-            <div class="form-row">
-              <div class="form-group"><label>Sender Name</label><input type="text" id="senderName" required placeholder="Full name"></div>
-              <div class="form-group"><label>Receiver Name</label><input type="text" id="receiverName" required placeholder="Full name"></div>
+      <div style="background:var(--surface);padding:32px;border-radius:var(--radius)">
+        <h2>Create New Shipment</h2>
+        <form id="shipmentForm" onsubmit="createShipment(event)">
+          <div class="form-row">
+            <div class="form-group"><label>Sender Name</label><input type="text" id="senderName" required placeholder="Full name"></div>
+            <div class="form-group"><label>Receiver Name</label><input type="text" id="receiverName" required placeholder="Full name"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Origin Address</label><input type="text" id="originAddress" required placeholder="Pickup address"></div>
+            <div class="form-group"><label>Destination Address</label><input type="text" id="receiverAddress" required placeholder="Delivery address"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Origin Coordinates (lat, lng)</label><input type="text" id="originCoords" placeholder="e.g. 40.7128, -74.0060" required></div>
+            <div class="form-group"><label>Destination Coordinates (lat, lng)</label><input type="text" id="destCoords" placeholder="e.g. 51.5074, -0.1278" required></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Package Description</label><input type="text" id="packageDesc" required placeholder="What's in the package"></div>
+            <div class="form-group"><label>Package Type</label>
+              <select id="packageType"><option>Parcel</option><option>Document</option><option>Fragile</option><option>Electronics</option><option>Furniture</option><option>Perishable</option><option>Hazardous</option><option>Other</option></select>
             </div>
-            <div class="form-row">
-              <div class="form-group"><label>Origin Address</label><input type="text" id="originAddress" required placeholder="Pickup address"></div>
-              <div class="form-group"><label>Destination Address</label><input type="text" id="receiverAddress" required placeholder="Delivery address"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Weight (kg)</label><input type="text" id="weight" placeholder="e.g. 2.5"></div>
+            <div class="form-group"><label>Quantity</label><input type="number" id="quantity" value="1" min="1"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Estimated Delivery Date</label><input type="date" id="estDelivery"></div>
+            <div class="form-group"><label>Special Instructions</label><input type="text" id="specialInst" placeholder="Handle with care, etc."></div>
+          </div>
+          <div id="adminMap" style="margin-top:16px"></div>
+          <p style="font-size:12px;color:var(--text-dim);margin-bottom:16px">Click the map to set origin (blue) and destination (red) coordinates.</p>
+          <div style="display:flex;gap:12px">
+            <button type="submit" class="btn btn-success">Create Shipment</button>
+            <button type="button" class="btn btn-danger" onclick="showSection('overview')">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div id="sectionMessages" class="hidden">
+      <div id="chatListView" class="chat-list"></div>
+      <div id="chatConversation" class="hidden">
+        <div class="chat-container">
+          <div class="chat-header">
+            <div style="display:flex;align-items:center;gap:12px">
+              <button class="btn btn-sm" onclick="backToChats()" style="background:var(--surface2);color:var(--text);padding:6px 12px">Back</button>
+              <div><h3 id="chatWith"></h3><p style="font-size:12px;color:var(--text-dim)" id="chatTN"></p></div>
             </div>
-            <div class="form-row">
-              <div class="form-group"><label>Origin Coordinates (lat, lng)</label><input type="text" id="originCoords" placeholder="e.g. 40.7128, -74.0060" required></div>
-              <div class="form-group"><label>Destination Coordinates (lat, lng)</label><input type="text" id="destCoords" placeholder="e.g. 51.5074, -0.1278" required></div>
+            <div class="e2e-badge">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              End-to-End Encrypted
             </div>
-            <div class="form-row">
-              <div class="form-group"><label>Package Description</label><input type="text" id="packageDesc" required placeholder="What's in the package"></div>
-              <div class="form-group"><label>Package Type</label>
-                <select id="packageType">
-                  <option>Parcel</option><option>Document</option><option>Fragile</option>
-                  <option>Electronics</option><option>Furniture</option><option>Perishable</option>
-                  <option>Hazardous</option><option>Other</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group"><label>Weight (kg)</label><input type="text" id="weight" placeholder="e.g. 2.5"></div>
-              <div class="form-group"><label>Quantity</label><input type="number" id="quantity" value="1" min="1"></div>
-            </div>
-            <div class="form-row">
-              <div class="form-group"><label>Estimated Delivery Date</label><input type="date" id="estDelivery"></div>
-              <div class="form-group"><label>Special Instructions</label><input type="text" id="specialInst" placeholder="Handle with care, etc."></div>
-            </div>
-            <div id="adminMap" style="margin-top:16px"></div>
-            <p style="font-size:12px;color:var(--text-dim);margin-bottom:16px">Click the map to set origin (blue) and destination (red) coordinates, or enter them manually above.</p>
-            <div style="display:flex;gap:12px">
-              <button type="submit" class="btn btn-success">Create Shipment</button>
-              <button type="button" class="btn btn-danger" onclick="showSection('overview')">Cancel</button>
-            </div>
-          </form>
+          </div>
+          <div class="chat-messages" id="chatMessages"></div>
+          <div class="chat-input">
+            <label class="attach-btn" for="chatFileInput">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+            </label>
+            <input type="file" id="chatFileInput" accept="image/*,.pdf,.doc,.docx,.txt,.zip" onchange="handleFileSelect(event)">
+            <input type="text" id="chatMsgInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendAdminMsg()">
+            <button onclick="sendAdminMsg()">Send</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ═══ GPS SECTION ═══ -->
+    <!-- GPS -->
     <div id="sectionGps" class="hidden">
       <div class="gps-panel">
         <h2>Live GPS Broadcasting</h2>
-        <p style="color:var(--text-dim);margin-bottom:16px">Enable GPS tracking to broadcast your device location to all active shipments in real-time.</p>
+        <p style="color:var(--text-dim);margin-bottom:16px">Enable GPS to broadcast your location to all active shipments.</p>
         <div style="display:flex;gap:12px;margin-bottom:16px">
           <button class="btn btn-success" onclick="startGPS()" id="gpsStartBtn">Start GPS Tracking</button>
           <button class="btn btn-danger hidden" onclick="stopGPS()" id="gpsStopBtn">Stop GPS Tracking</button>
@@ -227,274 +256,217 @@ tr:hover td{background:rgba(255,255,255,.03)}
   </div>
 </div>
 
-<!-- ═══ STATUS UPDATE MODAL ═══ -->
+<!-- STATUS MODAL -->
 <div class="modal-overlay" id="statusModal">
   <div class="modal" style="width:440px">
     <h2>Update Shipment Status</h2>
     <input type="hidden" id="statusShipId">
-    <div class="form-group">
-      <label>New Status</label>
-      <select id="newStatus">
-        <option>Picked Up</option><option>In Transit</option><option>In Customs</option>
-        <option>Out for Delivery</option><option>Delivered</option><option>Cancelled</option>
-      </select>
+    <div class="form-group"><label>New Status</label>
+      <select id="newStatus"><option>Picked Up</option><option>In Transit</option><option>In Customs</option><option>Out for Delivery</option><option>Delivered</option><option>Cancelled</option></select>
     </div>
-    <div class="form-group">
-      <label>Note (optional)</label>
-      <input type="text" id="statusNote" placeholder="Add a note about this update">
-    </div>
+    <div class="form-group"><label>Note (optional)</label><input type="text" id="statusNote" placeholder="Add a note"></div>
     <div class="modal-actions">
       <button class="btn btn-danger btn-sm" onclick="closeStatusModal()">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="updateStatus()">Update Status</button>
+      <button class="btn btn-primary btn-sm" onclick="updateStatus()">Update</button>
     </div>
   </div>
 </div>
 
-<script>
-// ─── State ─────────────────────
-let authToken = null;
-let shipments = [];
-let gpsWatchId = null;
-let gpsMap = null, gpsMarker = null;
-let formMap = null, originMarker = null, destMarker = null;
-let clickMode = 'origin'; // alternates between origin/dest
+<!-- IMAGE PREVIEW MODAL -->
+<div class="modal-overlay" id="imageModal" onclick="this.classList.remove('show')">
+  <img id="imagePreview" style="max-width:90vw;max-height:90vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+</div>
 
-// Detect the admin base path from the current URL
+<script>
+let authToken = null, shipments = [], gpsWatchId = null, gpsMap = null, gpsMarker = null;
+let formMap = null, originMarker = null, destMarker = null, clickMode = 'origin';
+let currentChatShipment = null, pendingFile = null;
 const API = window.location.pathname.replace(/\/+$/, '');
 
 // ─── Auth ──────────────────────
 async function doLogin() {
-  const user = document.getElementById('loginUser').value;
-  const pass = document.getElementById('loginPass').value;
+  const user = document.getElementById('loginUser').value, pass = document.getElementById('loginPass').value;
   try {
-    const r = await fetch(`${API}/api/login`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: user, password: pass })
-    });
+    const r = await fetch(`${API}/api/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:user,password:pass}) });
     const d = await r.json();
-    if (r.ok) {
-      authToken = d.token;
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('dashboard').style.display = 'block';
-      loadShipments();
-      initFormMap();
-    } else {
-      document.getElementById('loginError').textContent = d.error || 'Login failed';
-    }
-  } catch(e) { document.getElementById('loginError').textContent = 'Server connection failed'; }
+    if (r.ok) { authToken=d.token; document.getElementById('loginScreen').style.display='none'; document.getElementById('dashboard').style.display='block'; loadShipments(); initFormMap(); }
+    else document.getElementById('loginError').textContent = d.error||'Login failed';
+  } catch{ document.getElementById('loginError').textContent='Server connection failed'; }
 }
+function doLogout(){ authToken=null; stopGPS(); document.getElementById('loginScreen').style.display='flex'; document.getElementById('dashboard').style.display='none'; }
+document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 
-function doLogout() {
-  authToken = null;
-  stopGPS();
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('dashboard').style.display = 'none';
-}
-
-document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-
-// ─── API helpers ───────────────
-async function apiFetch(path, opts = {}) {
-  opts.headers = { ...opts.headers, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` };
-  const r = await fetch(`${API}${path}`, opts);
-  return r.json();
+async function apiFetch(path, opts={}) {
+  opts.headers={...opts.headers,'Content-Type':'application/json','Authorization':`Bearer ${authToken}`};
+  const r=await fetch(`${API}${path}`,opts); return r.json();
 }
 
 // ─── Shipments ─────────────────
 async function loadShipments() {
   shipments = await apiFetch('/api/shipments');
-  renderStats();
-  renderTable();
+  renderStats(); renderTable(); updateUnreadBadge();
 }
 
 function renderStats() {
-  document.getElementById('statTotal').textContent = shipments.length;
-  document.getElementById('statDelivered').textContent = shipments.filter(s => s.status === 'Delivered').length;
-  document.getElementById('statTransit').textContent = shipments.filter(s => ['In Transit','Out for Delivery','In Customs'].includes(s.status)).length;
-  document.getElementById('statPending').textContent = shipments.filter(s => s.status === 'Picked Up').length;
+  document.getElementById('statTotal').textContent=shipments.length;
+  document.getElementById('statDelivered').textContent=shipments.filter(s=>s.status==='Delivered').length;
+  document.getElementById('statTransit').textContent=shipments.filter(s=>['In Transit','Out for Delivery','In Customs'].includes(s.status)).length;
+  document.getElementById('statPending').textContent=shipments.filter(s=>s.status==='Picked Up').length;
 }
 
 function renderTable() {
-  const tbody = document.getElementById('shipmentsTable');
-  tbody.innerHTML = shipments.map(s => `
-    <tr>
+  document.getElementById('shipmentsTable').innerHTML = shipments.map(s=>{
+    const unread = s.unreadCount||0;
+    return `<tr>
       <td><strong>${s.trackingNumber}</strong><button class="copy-btn" onclick="copyTN('${s.trackingNumber}')">Copy</button></td>
       <td>${s.receiverName}</td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.receiverAddress}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.receiverAddress}</td>
       <td><span class="badge ${statusBadge(s.status)}">${s.status}</span></td>
-      <td>${new Date(s.createdAt).toLocaleDateString()}</td>
+      <td><button class="btn btn-sm" style="background:var(--surface2);color:var(--text)" onclick="openChat('${s.id}')">Chat${unread?` (${unread})`:''}</button></td>
       <td>
         <button class="btn btn-primary btn-sm" onclick="openStatusModal('${s.id}','${s.status}')">Status</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteShipment('${s.id}')">Delete</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteShipment('${s.id}')">Del</button>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
-function statusBadge(s) {
-  if (s === 'Delivered') return 'badge-green';
-  if (s === 'In Transit' || s === 'Out for Delivery') return 'badge-yellow';
-  if (s === 'Cancelled') return 'badge-red';
-  return 'badge-blue';
-}
+function statusBadge(s){ if(s==='Delivered')return'badge-green';if(s==='In Transit'||s==='Out for Delivery')return'badge-yellow';if(s==='Cancelled')return'badge-red';return'badge-blue'; }
+function copyTN(tn){ navigator.clipboard.writeText(tn); }
+function updateUnreadBadge(){ const total=shipments.reduce((a,s)=>a+(s.unreadCount||0),0); const el=document.getElementById('totalUnread'); el.textContent=total; if(total>0)el.classList.remove('hidden');else el.classList.add('hidden'); }
 
-function copyTN(tn) {
-  navigator.clipboard.writeText(tn);
-}
-
-// ─── Create Shipment ───────────
 async function createShipment(e) {
   e.preventDefault();
-  const oc = document.getElementById('originCoords').value.split(',').map(Number);
-  const dc = document.getElementById('destCoords').value.split(',').map(Number);
-  const body = {
-    senderName: document.getElementById('senderName').value,
-    receiverName: document.getElementById('receiverName').value,
-    originAddress: document.getElementById('originAddress').value,
-    receiverAddress: document.getElementById('receiverAddress').value,
-    packageDescription: document.getElementById('packageDesc').value,
-    packageType: document.getElementById('packageType').value,
-    weight: document.getElementById('weight').value,
-    quantity: parseInt(document.getElementById('quantity').value),
-    estimatedDelivery: document.getElementById('estDelivery').value,
-    specialInstructions: document.getElementById('specialInst').value,
-    originCoords: { lat: oc[0], lng: oc[1] },
-    destCoords: { lat: dc[0], lng: dc[1] }
+  const oc=document.getElementById('originCoords').value.split(',').map(Number), dc=document.getElementById('destCoords').value.split(',').map(Number);
+  const body={senderName:document.getElementById('senderName').value,receiverName:document.getElementById('receiverName').value,originAddress:document.getElementById('originAddress').value,receiverAddress:document.getElementById('receiverAddress').value,packageDescription:document.getElementById('packageDesc').value,packageType:document.getElementById('packageType').value,weight:document.getElementById('weight').value,quantity:parseInt(document.getElementById('quantity').value),estimatedDelivery:document.getElementById('estDelivery').value,specialInstructions:document.getElementById('specialInst').value,originCoords:{lat:oc[0],lng:oc[1]},destCoords:{lat:dc[0],lng:dc[1]}};
+  const result=await apiFetch('/api/shipments',{method:'POST',body:JSON.stringify(body)});
+  if(result.trackingNumber){alert(`Shipment created!\n\nTracking Number: ${result.trackingNumber}`);document.getElementById('shipmentForm').reset();showSection('overview');loadShipments();}
+}
+
+function openStatusModal(id,current){document.getElementById('statusShipId').value=id;document.getElementById('newStatus').value=current;document.getElementById('statusModal').classList.add('show');}
+function closeStatusModal(){document.getElementById('statusModal').classList.remove('show');}
+async function updateStatus(){const id=document.getElementById('statusShipId').value;await apiFetch(`/api/shipments/${id}/status`,{method:'PUT',body:JSON.stringify({status:document.getElementById('newStatus').value,note:document.getElementById('statusNote').value})});closeStatusModal();loadShipments();}
+async function deleteShipment(id){if(!confirm('Delete this shipment?'))return;await apiFetch(`/api/shipments/${id}`,{method:'DELETE'});loadShipments();}
+
+// ─── Chat ──────────────────────
+function renderChatList() {
+  const el = document.getElementById('chatListView');
+  el.innerHTML = shipments.map(s => {
+    const unread = s.unreadCount || 0;
+    const lastMsg = (s.messages && s.messages.length) ? s.messages[s.messages.length-1] : null;
+    const preview = lastMsg ? (lastMsg.fileName ? '📎 ' + lastMsg.fileName : (lastMsg.text||'').substring(0,50)) : 'No messages yet';
+    return `<div class="chat-card" onclick="openChat('${s.id}')">
+      <div class="chat-card-info">
+        <h3>${s.receiverName} <span style="font-weight:400;color:var(--text-dim);font-size:13px">— ${s.trackingNumber}</span></h3>
+        <p>${preview}</p>
+      </div>
+      ${unread ? `<div class="unread">${unread}</div>` : ''}
+    </div>`;
+  }).join('') || '<p style="color:var(--text-dim);text-align:center;padding:40px">No shipments yet. Create one to start chatting.</p>';
+}
+
+async function openChat(shipId) {
+  currentChatShipment = shipments.find(s => s.id === shipId);
+  if (!currentChatShipment) return;
+  showSection('messages');
+  document.getElementById('chatListView').classList.add('hidden');
+  document.getElementById('chatConversation').classList.remove('hidden');
+  document.getElementById('chatWith').textContent = currentChatShipment.receiverName;
+  document.getElementById('chatTN').textContent = currentChatShipment.trackingNumber;
+  renderMessages(currentChatShipment.messages || []);
+  // Mark as read
+  await apiFetch(`/api/shipments/${shipId}/chat/read`, { method: 'PUT' });
+  loadShipments();
+}
+
+function backToChats() {
+  currentChatShipment = null;
+  document.getElementById('chatConversation').classList.add('hidden');
+  document.getElementById('chatListView').classList.remove('hidden');
+  renderChatList();
+}
+
+function renderMessages(messages) {
+  const el = document.getElementById('chatMessages');
+  el.innerHTML = messages.map(m => {
+    const isAdmin = m.sender === 'admin';
+    let fileHtml = '';
+    if (m.fileData && m.fileType && m.fileType.startsWith('image/')) {
+      fileHtml = `<img src="${m.fileData}" class="file-img" onclick="previewImage('${m.fileData.replace(/'/g,"\\'")}')">`;
+    } else if (m.fileData && m.fileName) {
+      fileHtml = `<a href="${m.fileData}" download="${m.fileName}" class="msg-file"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>${m.fileName}</a>`;
+    }
+    return `<div class="chat-msg ${isAdmin?'admin':'client'}">
+      ${m.text||''}${fileHtml}
+      <span class="msg-time">${new Date(m.timestamp).toLocaleString()}</span>
+    </div>`;
+  }).join('') || '<p style="color:var(--text-dim);text-align:center;padding:40px">No messages yet. Say hello!</p>';
+  el.scrollTop = el.scrollHeight;
+}
+
+function previewImage(src) {
+  document.getElementById('imagePreview').src = src;
+  document.getElementById('imageModal').classList.add('show');
+}
+
+async function sendAdminMsg() {
+  if (!currentChatShipment) return;
+  const input = document.getElementById('chatMsgInput');
+  const text = input.value.trim();
+  if (!text && !pendingFile) return;
+  const body = { text };
+  if (pendingFile) { body.fileName = pendingFile.name; body.fileData = pendingFile.data; body.fileType = pendingFile.type; }
+  await apiFetch(`/api/shipments/${currentChatShipment.id}/chat`, { method: 'POST', body: JSON.stringify(body) });
+  input.value = '';
+  pendingFile = null;
+  // Reload
+  shipments = await apiFetch('/api/shipments');
+  currentChatShipment = shipments.find(s => s.id === currentChatShipment.id);
+  renderMessages(currentChatShipment.messages || []);
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('File must be under 5MB'); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    pendingFile = { name: file.name, data: reader.result, type: file.type };
+    document.getElementById('chatMsgInput').value = `📎 ${file.name}`;
+    document.getElementById('chatMsgInput').focus();
   };
-  const result = await apiFetch('/api/shipments', { method: 'POST', body: JSON.stringify(body) });
-  if (result.trackingNumber) {
-    alert(`Shipment created!\n\nTracking Number: ${result.trackingNumber}\n\nShare this with the client.`);
-    document.getElementById('shipmentForm').reset();
-    showSection('overview');
-    loadShipments();
-  }
-}
-
-// ─── Status Modal ──────────────
-function openStatusModal(id, current) {
-  document.getElementById('statusShipId').value = id;
-  document.getElementById('newStatus').value = current;
-  document.getElementById('statusModal').classList.add('show');
-}
-function closeStatusModal() { document.getElementById('statusModal').classList.remove('show'); }
-
-async function updateStatus() {
-  const id = document.getElementById('statusShipId').value;
-  const status = document.getElementById('newStatus').value;
-  const note = document.getElementById('statusNote').value;
-  await apiFetch(`/api/shipments/${id}/status`, { method: 'PUT', body: JSON.stringify({ status, note }) });
-  closeStatusModal();
-  loadShipments();
-}
-
-// ─── Delete ────────────────────
-async function deleteShipment(id) {
-  if (!confirm('Delete this shipment permanently?')) return;
-  await apiFetch(`/api/shipments/${id}`, { method: 'DELETE' });
-  loadShipments();
+  reader.readAsDataURL(file);
+  e.target.value = '';
 }
 
 // ─── Navigation ────────────────
 function showSection(name) {
-  document.querySelectorAll('[id^="section"]').forEach(el => el.classList.add('hidden'));
-  document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
-  const titles = { overview: 'Overview', newShipment: 'New Shipment', gps: 'Live GPS' };
-  document.getElementById('pageTitle').textContent = titles[name] || name;
-  const section = document.getElementById('section' + name.charAt(0).toUpperCase() + name.slice(1));
-  if (section) section.classList.remove('hidden');
-  // Activate sidebar link
-  const links = document.querySelectorAll('.sidebar nav a');
-  const idx = { overview: 0, newShipment: 1, gps: 2 };
-  if (idx[name] !== undefined && links[idx[name]]) links[idx[name]].classList.add('active');
-  // Init maps
-  if (name === 'gps' && !gpsMap) initGPSMap();
-  if (name === 'newShipment') {
-    setTimeout(() => { if (formMap) formMap.invalidateSize(); else initFormMap(); }, 200);
-  }
+  document.querySelectorAll('[id^="section"]').forEach(el=>el.classList.add('hidden'));
+  document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
+  const titles={overview:'Overview',newShipment:'New Shipment',messages:'Messages',gps:'Live GPS'};
+  document.getElementById('pageTitle').textContent=titles[name]||name;
+  const section=document.getElementById('section'+name.charAt(0).toUpperCase()+name.slice(1));
+  if(section)section.classList.remove('hidden');
+  const links=document.querySelectorAll('.sidebar nav a');
+  const idx={overview:0,newShipment:1,messages:2,gps:3};
+  if(idx[name]!==undefined&&links[idx[name]])links[idx[name]].classList.add('active');
+  if(name==='gps'&&!gpsMap)initGPSMap();
+  if(name==='newShipment')setTimeout(()=>{if(formMap)formMap.invalidateSize();else initFormMap();},200);
+  if(name==='messages'){document.getElementById('chatConversation').classList.add('hidden');document.getElementById('chatListView').classList.remove('hidden');renderChatList();}
 }
 
-// ─── Form Map ──────────────────
-function initFormMap() {
-  if (formMap) { formMap.invalidateSize(); return; }
-  formMap = L.map('adminMap').setView([20, 0], 2);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
-  }).addTo(formMap);
-  formMap.on('click', function(e) {
-    if (clickMode === 'origin') {
-      if (originMarker) formMap.removeLayer(originMarker);
-      originMarker = L.marker(e.latlng, { icon: blueIcon() }).addTo(formMap).bindPopup('Origin').openPopup();
-      document.getElementById('originCoords').value = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
-      clickMode = 'dest';
-    } else {
-      if (destMarker) formMap.removeLayer(destMarker);
-      destMarker = L.marker(e.latlng, { icon: redIcon() }).addTo(formMap).bindPopup('Destination').openPopup();
-      document.getElementById('destCoords').value = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
-      clickMode = 'origin';
-    }
-  });
-}
+// ─── Maps ──────────────────────
+function initFormMap(){if(formMap){formMap.invalidateSize();return;}formMap=L.map('adminMap').setView([20,0],2);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(formMap);formMap.on('click',function(e){if(clickMode==='origin'){if(originMarker)formMap.removeLayer(originMarker);originMarker=L.marker(e.latlng,{icon:blueIcon()}).addTo(formMap).bindPopup('Origin').openPopup();document.getElementById('originCoords').value=`${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;clickMode='dest';}else{if(destMarker)formMap.removeLayer(destMarker);destMarker=L.marker(e.latlng,{icon:redIcon()}).addTo(formMap).bindPopup('Destination').openPopup();document.getElementById('destCoords').value=`${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;clickMode='origin';}});}
+function blueIcon(){return L.divIcon({className:'',html:'<div style="width:16px;height:16px;background:#3b82f6;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>',iconSize:[16,16],iconAnchor:[8,8]});}
+function redIcon(){return L.divIcon({className:'',html:'<div style="width:16px;height:16px;background:#ef4444;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>',iconSize:[16,16],iconAnchor:[8,8]});}
+function initGPSMap(){gpsMap=L.map('gpsMapContainer').setView([20,0],3);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(gpsMap);}
 
-function blueIcon() {
-  return L.divIcon({ className: '', html: '<div style="width:16px;height:16px;background:#3b82f6;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>', iconSize:[16,16], iconAnchor:[8,8] });
-}
-function redIcon() {
-  return L.divIcon({ className: '', html: '<div style="width:16px;height:16px;background:#ef4444;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4)"></div>', iconSize:[16,16], iconAnchor:[8,8] });
-}
+function startGPS(){if(!navigator.geolocation){alert('Geolocation not supported');return;}document.getElementById('gpsStartBtn').classList.add('hidden');document.getElementById('gpsStopBtn').classList.remove('hidden');document.getElementById('gpsDot').classList.add('active');document.getElementById('gpsLabel').textContent='GPS Active — Broadcasting';gpsWatchId=navigator.geolocation.watchPosition(async(pos)=>{const{latitude:lat,longitude:lng}=pos.coords;document.getElementById('gpsLat').textContent=lat.toFixed(6);document.getElementById('gpsLng').textContent=lng.toFixed(6);document.getElementById('gpsTime').textContent=new Date().toLocaleTimeString();if(gpsMap){if(!gpsMarker){gpsMarker=L.marker([lat,lng],{icon:blueIcon()}).addTo(gpsMap);gpsMap.setView([lat,lng],14);}else gpsMarker.setLatLng([lat,lng]);}try{await apiFetch('/api/broadcast-location',{method:'PUT',body:JSON.stringify({lat,lng})});}catch{}},err=>console.error('GPS:',err),{enableHighAccuracy:true,maximumAge:5000,timeout:10000});}
 
-// ─── GPS Tracking ──────────────
-function initGPSMap() {
-  gpsMap = L.map('gpsMapContainer').setView([20, 0], 3);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
-  }).addTo(gpsMap);
-}
+function stopGPS(){if(gpsWatchId!==null){navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;}document.getElementById('gpsStartBtn').classList.remove('hidden');document.getElementById('gpsStopBtn').classList.add('hidden');document.getElementById('gpsDot').classList.remove('active');document.getElementById('gpsLabel').textContent='GPS Inactive';}
 
-function startGPS() {
-  if (!navigator.geolocation) { alert('Geolocation not supported'); return; }
-  document.getElementById('gpsStartBtn').classList.add('hidden');
-  document.getElementById('gpsStopBtn').classList.remove('hidden');
-  document.getElementById('gpsDot').classList.add('active');
-  document.getElementById('gpsLabel').textContent = 'GPS Active — Broadcasting';
-
-  gpsWatchId = navigator.geolocation.watchPosition(
-    async (pos) => {
-      const { latitude: lat, longitude: lng } = pos.coords;
-      document.getElementById('gpsLat').textContent = lat.toFixed(6);
-      document.getElementById('gpsLng').textContent = lng.toFixed(6);
-      document.getElementById('gpsTime').textContent = new Date().toLocaleTimeString();
-
-      if (gpsMap) {
-        if (!gpsMarker) {
-          gpsMarker = L.marker([lat, lng], { icon: blueIcon() }).addTo(gpsMap);
-          gpsMap.setView([lat, lng], 14);
-        } else {
-          gpsMarker.setLatLng([lat, lng]);
-        }
-      }
-
-      // Broadcast to all active shipments
-      try {
-        await apiFetch('/api/broadcast-location', {
-          method: 'PUT', body: JSON.stringify({ lat, lng })
-        });
-      } catch {}
-    },
-    (err) => { console.error('GPS Error:', err); },
-    { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-  );
-}
-
-function stopGPS() {
-  if (gpsWatchId !== null) {
-    navigator.geolocation.clearWatch(gpsWatchId);
-    gpsWatchId = null;
-  }
-  document.getElementById('gpsStartBtn').classList.remove('hidden');
-  document.getElementById('gpsStopBtn').classList.add('hidden');
-  document.getElementById('gpsDot').classList.remove('active');
-  document.getElementById('gpsLabel').textContent = 'GPS Inactive';
-}
+// Poll for new messages every 10 seconds
+setInterval(()=>{if(authToken)loadShipments().then(()=>{if(currentChatShipment){currentChatShipment=shipments.find(s=>s.id===currentChatShipment.id);if(currentChatShipment)renderMessages(currentChatShipment.messages||[]);}});},10000);
 </script>
 </body>
 </html>

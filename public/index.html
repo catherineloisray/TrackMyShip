@@ -112,6 +112,36 @@ a{text-decoration:none;color:inherit}
 .spinner{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* ═══ Chat Widget ═══ */
+.chat-widget{position:fixed;bottom:24px;right:24px;z-index:1000}
+.chat-toggle{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;border:none;cursor:pointer;box-shadow:0 6px 24px rgba(59,130,246,.4);display:flex;align-items:center;justify-content:center;transition:transform .2s}
+.chat-toggle:hover{transform:scale(1.1)}
+.chat-toggle svg{width:28px;height:28px}
+.chat-toggle .notif{position:absolute;top:-2px;right:-2px;background:var(--danger);color:#fff;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+.chat-panel{display:none;position:fixed;bottom:96px;right:24px;width:380px;height:500px;background:var(--surface);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);flex-direction:column;overflow:hidden;z-index:1000;border:1px solid var(--border)}
+.chat-panel.open{display:flex}
+.chat-panel-header{padding:16px 20px;background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;display:flex;justify-content:space-between;align-items:center}
+.chat-panel-header h3{font-size:15px}
+.chat-panel-header .e2e{font-size:10px;opacity:.7;display:flex;align-items:center;gap:4px}
+.chat-panel-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.chat-bubble{max-width:80%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.5;word-wrap:break-word}
+.chat-bubble.admin{background:var(--accent);color:#fff;align-self:flex-start;border-bottom-left-radius:4px}
+.chat-bubble.client{background:var(--surface);color:var(--text);align-self:flex-end;border-bottom-right-radius:4px}
+.chat-bubble .bubble-time{font-size:10px;opacity:.5;margin-top:4px;display:block}
+.chat-bubble .bubble-file{display:flex;align-items:center;gap:6px;margin-top:6px;padding:6px 10px;background:rgba(0,0,0,.15);border-radius:8px;font-size:12px;cursor:pointer;text-decoration:none;color:inherit}
+.chat-bubble .bubble-img{max-width:200px;max-height:150px;border-radius:8px;margin-top:6px;cursor:pointer}
+.chat-panel-input{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;background:var(--surface)}
+.chat-panel-input input[type="text"]{flex:1;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none}
+.chat-panel-input input[type="text"]:focus{border-color:var(--accent)}
+.chat-panel-input button{padding:10px 16px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:13px}
+.chat-panel-input .attach{padding:8px;background:none;border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text-dim);display:flex}
+.chat-panel-input .attach:hover{border-color:var(--accent);color:var(--accent)}
+.chat-panel-input input[type="file"]{display:none}
+/* Image preview */
+.img-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:2000;align-items:center;justify-content:center}
+.img-overlay.show{display:flex}
+.img-overlay img{max-width:90vw;max-height:90vh;border-radius:12px}
+
 /* Responsive */
 @media(max-width:768px){
   .hero h1{font-size:28px}
@@ -122,6 +152,7 @@ a{text-decoration:none;color:inherit}
   .search-box button{justify-content:center}
   .info-row{flex-direction:column;gap:4px}
   .info-row .value{text-align:left;max-width:100%}
+  .chat-panel{width:calc(100vw - 32px);right:16px;bottom:88px;height:60vh}
 }
 </style>
 </head>
@@ -253,6 +284,39 @@ a{text-decoration:none;color:inherit}
     </div>
   </div>
 </section>
+
+<!-- ═══ CHAT WIDGET ═══ -->
+<div class="chat-widget" id="chatWidget" style="display:none">
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-panel-header">
+      <div>
+        <h3>TrackMyShip Support</h3>
+        <div class="e2e">
+          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          End-to-End Encrypted
+        </div>
+      </div>
+      <button onclick="toggleChat()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:20px">&#x2715;</button>
+    </div>
+    <div class="chat-panel-body" id="chatBody"></div>
+    <div class="chat-panel-input">
+      <label class="attach" for="clientFileInput">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+      </label>
+      <input type="file" id="clientFileInput" accept="image/*,.pdf,.doc,.docx,.txt,.zip" onchange="handleClientFile(event)">
+      <input type="text" id="clientMsgInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendClientMsg()">
+      <button onclick="sendClientMsg()">Send</button>
+    </div>
+  </div>
+  <button class="chat-toggle" onclick="toggleChat()" id="chatToggleBtn">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+  </button>
+</div>
+
+<!-- Image Preview Overlay -->
+<div class="img-overlay" id="imgOverlay" onclick="this.classList.remove('show')">
+  <img id="imgPreviewSrc">
+</div>
 
 <!-- ═══ FOOTER ═══ -->
 <footer class="footer">
@@ -504,6 +568,146 @@ function connectLive(tn) {
 const style = document.createElement('style');
 style.textContent = `@keyframes pulse-ring{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.5);opacity:0}}`;
 document.head.appendChild(style);
+
+// ═══ CHAT WIDGET ═══════════════
+let chatOpen = false;
+let clientPendingFile = null;
+let currentTN = null;
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById('chatPanel').classList.toggle('open', chatOpen);
+  if (chatOpen && currentTN) loadClientMessages();
+}
+
+function showChatWidget(tn) {
+  currentTN = tn;
+  document.getElementById('chatWidget').style.display = 'block';
+  loadClientMessages();
+}
+
+function hideChatWidget() {
+  document.getElementById('chatWidget').style.display = 'none';
+  currentTN = null;
+  chatOpen = false;
+  document.getElementById('chatPanel').classList.remove('open');
+}
+
+async function loadClientMessages() {
+  if (!currentTN) return;
+  try {
+    const r = await fetch(`${API}/api/chat/messages?tn=${encodeURIComponent(currentTN)}`);
+    if (!r.ok) return;
+    const messages = await r.json();
+    renderClientChat(messages);
+  } catch {}
+}
+
+function renderClientChat(messages) {
+  const el = document.getElementById('chatBody');
+  if (!messages.length) {
+    el.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:30px;font-size:13px">Send a message to the delivery team. All messages are end-to-end encrypted.</p>';
+    return;
+  }
+  el.innerHTML = messages.map(m => {
+    const isClient = m.sender === 'client';
+    let fileHtml = '';
+    if (m.fileData && m.fileType && m.fileType.startsWith('image/')) {
+      fileHtml = `<img src="${m.fileData}" class="bubble-img" onclick="document.getElementById('imgPreviewSrc').src='${m.fileData.replace(/'/g,"\\'")}';document.getElementById('imgOverlay').classList.add('show')">`;
+    } else if (m.fileData && m.fileName) {
+      fileHtml = `<a href="${m.fileData}" download="${m.fileName}" class="bubble-file"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3"/></svg>${m.fileName}</a>`;
+    }
+    return `<div class="chat-bubble ${isClient?'client':'admin'}">
+      ${m.text||''}${fileHtml}
+      <span class="bubble-time">${new Date(m.timestamp).toLocaleString()}</span>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendClientMsg() {
+  if (!currentTN) return;
+  const input = document.getElementById('clientMsgInput');
+  const text = input.value.trim();
+  if (!text && !clientPendingFile) return;
+  const body = { trackingNumber: currentTN, text };
+  if (clientPendingFile) { body.fileName = clientPendingFile.name; body.fileData = clientPendingFile.data; body.fileType = clientPendingFile.type; }
+  try {
+    await fetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    input.value = '';
+    clientPendingFile = null;
+    loadClientMessages();
+  } catch {}
+}
+
+function handleClientFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('File must be under 5MB'); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    clientPendingFile = { name: file.name, data: reader.result, type: file.type };
+    document.getElementById('clientMsgInput').value = `📎 ${file.name}`;
+    document.getElementById('clientMsgInput').focus();
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+// Show chat widget when tracking result loads
+const origRenderResults = renderResults;
+renderResults = function(data) {
+  origRenderResults(data);
+  showChatWidget(data.trackingNumber);
+};
+
+const origShowHome = showHome;
+showHome = function() {
+  origShowHome();
+  hideChatWidget();
+};
+
+// Listen for new messages via SSE
+const origConnectLive = connectLive;
+connectLive = function(tn) {
+  origConnectLive(tn);
+  // Override the SSE handler to also handle chat
+  if (evtSource) {
+    const origHandler = evtSource.onmessage;
+    evtSource.onmessage = (e) => {
+      origHandler(e);
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === 'new_message') {
+          loadClientMessages();
+          // Show notification dot if chat is closed
+          if (!chatOpen) {
+            const btn = document.getElementById('chatToggleBtn');
+            if (!btn.querySelector('.notif')) {
+              const dot = document.createElement('span');
+              dot.className = 'notif';
+              dot.textContent = '!';
+              btn.appendChild(dot);
+            }
+          }
+        }
+      } catch {}
+    };
+  }
+};
+
+// Remove notification when opening chat
+const origToggle = toggleChat;
+toggleChat = function() {
+  origToggle();
+  if (chatOpen) {
+    const notif = document.getElementById('chatToggleBtn').querySelector('.notif');
+    if (notif) notif.remove();
+  }
+};
+
+// Poll for messages every 15 seconds
+setInterval(() => { if (currentTN && chatOpen) loadClientMessages(); }, 15000);
 </script>
 </body>
 </html>
