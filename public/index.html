@@ -421,6 +421,10 @@ function showHome() {
 
 // ─── Render Results (all-in-one, no overrides) ────────────
 function renderResults(data) {
+  // ── SET TRACKING NUMBER FIRST so chat always works ──
+  currentTN = data.trackingNumber;
+  document.getElementById('chatWidget').style.display = 'block';
+
   document.getElementById('resultsView').style.display = 'block';
   document.getElementById('displayTN').textContent = data.trackingNumber;
   document.getElementById('statusBadgeContainer').innerHTML = '<div class="status-badge ' + statusClass(data.status) + '">' + statusIcon(data.status) + ' ' + data.status + '</div>';
@@ -440,11 +444,11 @@ function renderResults(data) {
     infoRow('Shipped On', new Date(data.createdAt).toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }));
 
   renderTimeline(data.statusHistory);
-  renderMap(data);
 
-  // ── Chat: set tracking number, show floating widget, load all messages ──
-  currentTN = data.trackingNumber;
-  document.getElementById('chatWidget').style.display = 'block';
+  // Wrap map in try-catch so a map error doesn't break chat
+  try { renderMap(data); } catch(err) { console.error('Map error:', err); }
+
+  // ── Load messages ──
   loadAllMessages();
 }
 
