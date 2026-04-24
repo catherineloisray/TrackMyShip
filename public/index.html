@@ -280,6 +280,29 @@ a{text-decoration:none;color:inherit}
             <div class="timeline" id="timeline"></div>
           </div>
         </div>
+
+        <!-- Messages Card -->
+        <div class="info-card" style="margin-top:24px" id="messagesCard">
+          <div class="info-card-header" style="cursor:pointer" onclick="toggleChat()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+            <h3>Messages <span id="msgCount" style="font-size:12px;opacity:.7"></span></h3>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;opacity:.7">
+              <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              Encrypted
+            </div>
+          </div>
+          <div class="info-card-body">
+            <div id="inlineMessages" style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 0"></div>
+            <div style="display:flex;gap:8px;margin-top:16px;align-items:center">
+              <label style="padding:8px;border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text-dim);display:flex" for="inlineFileInput">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+              </label>
+              <input type="file" id="inlineFileInput" style="display:none" accept="image/*,.pdf,.doc,.docx,.txt,.zip" onchange="handleInlineFile(event)">
+              <input type="text" id="inlineMsgInput" placeholder="Type a message..." style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:13px;outline:none;background:var(--surface-alt,#f1f5f9);color:var(--text)" onkeydown="if(event.key==='Enter')sendInlineMsg()">
+              <button onclick="sendInlineMsg()" style="padding:10px 18px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:13px">Send</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -706,8 +729,84 @@ toggleChat = function() {
   }
 };
 
-// Poll for messages every 15 seconds
-setInterval(() => { if (currentTN && chatOpen) loadClientMessages(); }, 15000);
+// ═══ INLINE MESSAGES (inside tracking result) ═══
+let inlinePendingFile = null;
+
+function renderInlineMessages(messages) {
+  const el = document.getElementById('inlineMessages');
+  const countEl = document.getElementById('msgCount');
+  if (!messages || !messages.length) {
+    el.innerHTML = '<p style="color:var(--text-dim);text-align:center;padding:20px;font-size:13px">No messages yet. Send a message to the delivery team.</p>';
+    countEl.textContent = '';
+    return;
+  }
+  countEl.textContent = `(${messages.length})`;
+  el.innerHTML = messages.map(m => {
+    const isClient = m.sender === 'client';
+    let fileHtml = '';
+    if (m.fileData && m.fileType && m.fileType.startsWith('image/')) {
+      fileHtml = `<img src="${m.fileData}" style="max-width:200px;max-height:150px;border-radius:8px;margin-top:6px;cursor:pointer" onclick="document.getElementById('imgPreviewSrc').src=this.src;document.getElementById('imgOverlay').classList.add('show')">`;
+    } else if (m.fileData && m.fileName) {
+      fileHtml = `<a href="${m.fileData}" download="${m.fileName}" style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:6px 10px;background:rgba(0,0,0,.06);border-radius:8px;font-size:12px;text-decoration:none;color:inherit"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3"/></svg>${m.fileName}</a>`;
+    }
+    return `<div style="max-width:80%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.5;word-wrap:break-word;${isClient?'background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px':'background:var(--surface-alt,#e2e8f0);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px'}">
+      <div style="font-size:11px;font-weight:600;margin-bottom:2px;opacity:.7">${isClient?'You':'TrackMyShip'}</div>
+      ${m.text||''}${fileHtml}
+      <span style="font-size:10px;opacity:.5;margin-top:4px;display:block">${new Date(m.timestamp).toLocaleString()}</span>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function loadInlineMessages() {
+  if (!currentTN) return;
+  try {
+    const r = await fetch(`${API}/api/chat/messages?tn=${encodeURIComponent(currentTN)}`);
+    if (!r.ok) return;
+    const messages = await r.json();
+    renderInlineMessages(messages);
+    renderClientChat(messages); // also update floating chat
+  } catch {}
+}
+
+async function sendInlineMsg() {
+  if (!currentTN) return;
+  const input = document.getElementById('inlineMsgInput');
+  const text = input.value.trim();
+  if (!text && !inlinePendingFile) return;
+  const body = { trackingNumber: currentTN, text };
+  if (inlinePendingFile) { body.fileName = inlinePendingFile.name; body.fileData = inlinePendingFile.data; body.fileType = inlinePendingFile.type; }
+  try {
+    await fetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    input.value = '';
+    inlinePendingFile = null;
+    loadInlineMessages();
+  } catch {}
+}
+
+function handleInlineFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('File must be under 5MB'); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    inlinePendingFile = { name: file.name, data: reader.result, type: file.type };
+    document.getElementById('inlineMsgInput').value = `📎 ${file.name}`;
+    document.getElementById('inlineMsgInput').focus();
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+// Override renderResults to also load inline messages
+const origRenderResults2 = renderResults;
+renderResults = function(data) {
+  origRenderResults2(data);
+  loadInlineMessages();
+};
+
+// Poll for messages every 15 seconds (both inline and floating)
+setInterval(() => { if (currentTN) loadInlineMessages(); }, 15000);
 </script>
 </body>
 </html>
