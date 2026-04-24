@@ -100,14 +100,18 @@ function serveFile(filePath, res) {
 
 function parseBody(req, limit = MAX_BODY) {
   return new Promise((resolve, reject) => {
-    let body = '';
+    const chunks = [];
     let size = 0;
     req.on('data', c => {
       size += c.length;
       if (size > limit) { reject(new Error('Body too large')); req.destroy(); return; }
-      body += c;
+      chunks.push(c);
     });
-    req.on('end', () => { try { resolve(JSON.parse(body)); } catch { resolve({}); } });
+    req.on('end', () => {
+      const body = Buffer.concat(chunks).toString('utf8');
+      try { resolve(JSON.parse(body)); }
+      catch(e) { console.error('[parseBody] JSON parse failed:', e.message, '| raw:', body.substring(0, 200)); resolve({}); }
+    });
     req.on('error', reject);
   });
 }
@@ -260,9 +264,12 @@ const server = http.createServer(async (req, res) => {
   // Admin Login
   if (pathname === `${ADMIN_PATH}/api/login` && req.method === 'POST') {
     const body = await parseBody(req);
+    console.log('[LOGIN] Attempt — username:', body.username, '| password length:', (body.password||'').length, '| has password:', !!body.password);
     if (body.username === 'admin' && body.password === 'TrackMyShip2026!') {
+      console.log('[LOGIN] Success');
       return jsonRes(res, 200, { token: ADMIN_SECRET, message: 'Login successful' });
     }
+    console.log('[LOGIN] Failed — credentials mismatch');
     return jsonRes(res, 401, { error: 'Invalid credentials' });
   }
 

@@ -282,6 +282,8 @@ let authToken = null, shipments = [], gpsWatchId = null, gpsMap = null, gpsMarke
 let formMap = null, originMarker = null, destMarker = null, clickMode = 'origin';
 let currentChatShipment = null, pendingFile = null;
 const API = window.location.pathname.replace(/\/+$/, '');
+const APP_VERSION = 'v2.2';
+console.log('[TrackMyShip Admin ' + APP_VERSION + '] loaded at ' + new Date().toISOString());
 
 // ─── Auth ──────────────────────
 async function doLogin() {

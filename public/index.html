@@ -344,7 +344,7 @@ a{text-decoration:none;color:inherit}
 <!-- ═══ FOOTER ═══ -->
 <footer class="footer">
   <p><strong>TrackMyShip</strong> — Free Global Delivery Tracking</p>
-  <p style="margin-top:4px">&copy; 2026 TrackMyShip. All shipments tracked end-to-end.</p>
+  <p style="margin-top:4px">&copy; 2026 TrackMyShip. All shipments tracked end-to-end. <span style="opacity:.4" id="appVer"></span></p>
 </footer>
 
 <script>
@@ -358,6 +358,9 @@ let inlinePendingFile = null;
 let currentTN = null;
 
 const API = '';
+const APP_VERSION = 'v2.2';
+console.log('[TrackMyShip Client ' + APP_VERSION + '] loaded at ' + new Date().toISOString());
+document.addEventListener('DOMContentLoaded', function() { var v = document.getElementById('appVer'); if (v) v.textContent = APP_VERSION; });
 
 // ─── Track ─────────────────────
 document.getElementById('trackInput').addEventListener('keydown', e => {
