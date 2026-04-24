@@ -298,7 +298,14 @@ document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='
 
 async function apiFetch(path, opts={}) {
   opts.headers={...opts.headers,'Content-Type':'application/json','Authorization':`Bearer ${authToken}`};
-  const r=await fetch(`${API}${path}`,opts); return r.json();
+  const r=await fetch(`${API}${path}`,opts);
+  if (!r.ok) {
+    const errData = await r.json().catch(()=>({}));
+    console.error('API Error:', r.status, path, errData);
+    if (r.status === 403) { alert('Session expired. Please log in again.'); doLogout(); }
+    throw new Error(errData.error || 'API call failed');
+  }
+  return r.json();
 }
 
 // ─── Shipments ─────────────────

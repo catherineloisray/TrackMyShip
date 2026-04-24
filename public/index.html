@@ -576,12 +576,18 @@ document.head.appendChild(pulseStyle);
 function loadAllMessages() {
   if (!currentTN) return;
   fetch(API + '/api/chat/messages?tn=' + encodeURIComponent(currentTN))
-    .then(function(r) { if (!r.ok) throw new Error('fail'); return r.json(); })
+    .then(function(r) {
+      if (!r.ok) throw new Error('Server returned ' + r.status);
+      return r.json();
+    })
     .then(function(messages) {
+      console.log('[TrackMyShip] Loaded', messages.length, 'messages for', currentTN);
       renderInlineMessages(messages);
       renderFloatingChat(messages);
     })
-    .catch(function(err) { console.error('Failed to load messages:', err); });
+    .catch(function(err) {
+      console.error('[TrackMyShip] Failed to load messages:', err);
+    });
 }
 
 // ─── Floating Chat Widget ─────────────
@@ -624,8 +630,12 @@ function sendClientMsg() {
   var body = { trackingNumber: currentTN, text: text };
   if (clientPendingFile) { body.fileName = clientPendingFile.name; body.fileData = clientPendingFile.data; body.fileType = clientPendingFile.type; }
   fetch(API + '/api/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    .then(function(r) { if (r.ok) { input.value = ''; clientPendingFile = null; loadAllMessages(); } })
-    .catch(function(err) { console.error('Send failed:', err); });
+    .then(function(r) {
+      if (!r.ok) throw new Error('Server returned ' + r.status);
+      return r.json();
+    })
+    .then(function() { input.value = ''; clientPendingFile = null; loadAllMessages(); })
+    .catch(function(err) { console.error('Send failed:', err); alert('Failed to send. Please try again.'); });
 }
 
 function handleClientFile(e) {
@@ -670,15 +680,35 @@ function renderInlineMessages(messages) {
 }
 
 function sendInlineMsg() {
-  if (!currentTN) return;
+  if (!currentTN) { alert('Error: No tracking number. Please track a shipment first.'); return; }
   var input = document.getElementById('inlineMsgInput');
   var text = input.value.trim();
   if (!text && !inlinePendingFile) return;
   var body = { trackingNumber: currentTN, text: text };
   if (inlinePendingFile) { body.fileName = inlinePendingFile.name; body.fileData = inlinePendingFile.data; body.fileType = inlinePendingFile.type; }
+  // Disable button while sending
+  var sendBtn = input.parentElement.querySelector('button');
+  sendBtn.textContent = 'Sending...';
+  sendBtn.disabled = true;
   fetch(API + '/api/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    .then(function(r) { if (r.ok) { input.value = ''; inlinePendingFile = null; loadAllMessages(); } })
-    .catch(function(err) { console.error('Inline send failed:', err); });
+    .then(function(r) {
+      if (!r.ok) throw new Error('Server returned ' + r.status);
+      return r.json();
+    })
+    .then(function(result) {
+      console.log('Message sent OK:', result);
+      input.value = '';
+      inlinePendingFile = null;
+      loadAllMessages();
+    })
+    .catch(function(err) {
+      console.error('Inline send failed:', err);
+      alert('Failed to send message. Please try again.');
+    })
+    .finally(function() {
+      sendBtn.textContent = 'Send';
+      sendBtn.disabled = false;
+    });
 }
 
 function handleInlineFile(e) {

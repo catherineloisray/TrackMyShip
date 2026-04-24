@@ -7,7 +7,9 @@ const crypto = require('crypto');
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data', 'shipments.json');
 const UPLOADS_DIR = path.join(__dirname, 'data', 'uploads');
-const ADMIN_SECRET = crypto.randomBytes(32).toString('hex');
+// IMPORTANT: Use a stable key so it survives server restarts on Render.
+// A random key would break all existing messages and admin sessions after every restart.
+const ADMIN_SECRET = crypto.createHash('sha256').update('TrackMyShip2026!-stable-admin-key-v1').digest('hex');
 const ADMIN_PATH = '/ctrl-panel-9v7k2m';
 const MAX_BODY = 10 * 1024 * 1024; // 10MB max upload
 
@@ -483,6 +485,6 @@ server.listen(PORT, () => {
       });
       req.on('error', () => {});
       req.end();
-    }, 13 * 60 * 1000);
+    }, 10 * 60 * 1000); // Ping every 10 minutes to prevent sleeping
   }
 });
