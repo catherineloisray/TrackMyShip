@@ -283,7 +283,7 @@ a{text-decoration:none;color:inherit}
 
         <!-- Messages Card -->
         <div class="info-card" style="margin-top:24px" id="messagesCard">
-          <div class="info-card-header" style="cursor:pointer" onclick="toggleChat()">
+          <div class="info-card-header">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
             <h3>Messages <span id="msgCount" style="font-size:12px;opacity:.7"></span></h3>
             <div style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;opacity:.7">
@@ -298,7 +298,7 @@ a{text-decoration:none;color:inherit}
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
               </label>
               <input type="file" id="inlineFileInput" style="display:none" accept="image/*,.pdf,.doc,.docx,.txt,.zip" onchange="handleInlineFile(event)">
-              <input type="text" id="inlineMsgInput" placeholder="Type a message..." style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:13px;outline:none;background:var(--surface-alt,#f1f5f9);color:var(--text)" onkeydown="if(event.key==='Enter')sendInlineMsg()">
+              <input type="text" id="inlineMsgInput" placeholder="Type a message..." style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:13px;outline:none;background:#f1f5f9;color:var(--text)" onkeydown="if(event.key==='Enter')sendInlineMsg()">
               <button onclick="sendInlineMsg()" style="padding:10px 18px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:13px">Send</button>
             </div>
           </div>
@@ -352,6 +352,10 @@ a{text-decoration:none;color:inherit}
 let map = null, currentMarker = null, originMarker = null, destMarker = null, routeLine = null;
 let evtSource = null;
 let currentData = null;
+let chatOpen = false;
+let clientPendingFile = null;
+let inlinePendingFile = null;
+let currentTN = null;
 
 const API = '';
 
@@ -360,7 +364,6 @@ document.getElementById('trackInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') trackShipment();
 });
 
-// Check URL for tracking number on load
 window.addEventListener('load', () => {
   const params = new URLSearchParams(window.location.search);
   const tn = params.get('tn');
@@ -373,11 +376,7 @@ window.addEventListener('load', () => {
 async function trackShipment() {
   const tn = document.getElementById('trackInput').value.trim().toUpperCase();
   if (!tn) return;
-
-  // Update URL
-  history.pushState(null, '', `?tn=${tn}`);
-
-  // Show tracking result area
+  history.pushState(null, '', '?tn=' + tn);
   document.getElementById('heroSection').style.padding = '40px 24px 60px';
   document.getElementById('heroSection').querySelector('h1').style.display = 'none';
   document.getElementById('heroSection').querySelector('p').style.display = 'none';
@@ -388,16 +387,16 @@ async function trackShipment() {
   document.getElementById('resultsView').style.display = 'none';
 
   try {
-    const r = await fetch(`${API}/api/track?tn=${encodeURIComponent(tn)}`);
+    const r = await fetch(API + '/api/track?tn=' + encodeURIComponent(tn));
     if (!r.ok) throw new Error('Not found');
     const data = await r.json();
     currentData = data;
-    setTimeout(() => {
+    setTimeout(function() {
       document.getElementById('loadingView').style.display = 'none';
       renderResults(data);
       connectLive(tn);
     }, 800);
-  } catch {
+  } catch(e) {
     document.getElementById('loadingView').style.display = 'none';
     document.getElementById('errorView').style.display = 'block';
   }
@@ -413,155 +412,119 @@ function showHome() {
   document.getElementById('trackInput').value = '';
   if (evtSource) { evtSource.close(); evtSource = null; }
   if (map) { map.remove(); map = null; }
+  // Hide chat widget and reset
+  document.getElementById('chatWidget').style.display = 'none';
+  currentTN = null;
+  chatOpen = false;
+  document.getElementById('chatPanel').classList.remove('open');
 }
 
-// ─── Render Results ────────────
+// ─── Render Results (all-in-one, no overrides) ────────────
 function renderResults(data) {
   document.getElementById('resultsView').style.display = 'block';
   document.getElementById('displayTN').textContent = data.trackingNumber;
-  document.getElementById('statusBadgeContainer').innerHTML = `<div class="status-badge ${statusClass(data.status)}">${statusIcon(data.status)} ${data.status}</div>`;
+  document.getElementById('statusBadgeContainer').innerHTML = '<div class="status-badge ' + statusClass(data.status) + '">' + statusIcon(data.status) + ' ' + data.status + '</div>';
 
-  // Package info
-  const info = document.getElementById('packageInfo');
-  info.innerHTML = `
-    ${infoRow('Sender', data.senderName)}
-    ${infoRow('Receiver', data.receiverName)}
-    ${infoRow('From', data.originAddress)}
-    ${infoRow('To', data.receiverAddress)}
-    ${infoRow('Package', data.packageDescription)}
-    ${infoRow('Type', data.packageType)}
-    ${infoRow('Weight', data.weight ? data.weight + ' kg' : '—')}
-    ${infoRow('Quantity', data.quantity)}
-    ${data.estimatedDelivery ? infoRow('Est. Delivery', new Date(data.estimatedDelivery).toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' })) : ''}
-    ${data.specialInstructions ? infoRow('Instructions', data.specialInstructions) : ''}
-    ${infoRow('Shipped On', new Date(data.createdAt).toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }))}
-  `;
+  var info = document.getElementById('packageInfo');
+  info.innerHTML =
+    infoRow('Sender', data.senderName) +
+    infoRow('Receiver', data.receiverName) +
+    infoRow('From', data.originAddress) +
+    infoRow('To', data.receiverAddress) +
+    infoRow('Package', data.packageDescription) +
+    infoRow('Type', data.packageType) +
+    infoRow('Weight', data.weight ? data.weight + ' kg' : '—') +
+    infoRow('Quantity', data.quantity) +
+    (data.estimatedDelivery ? infoRow('Est. Delivery', new Date(data.estimatedDelivery).toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' })) : '') +
+    (data.specialInstructions ? infoRow('Instructions', data.specialInstructions) : '') +
+    infoRow('Shipped On', new Date(data.createdAt).toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }));
 
-  // Timeline
   renderTimeline(data.statusHistory);
-
-  // Map
   renderMap(data);
+
+  // ── Chat: set tracking number, show floating widget, load all messages ──
+  currentTN = data.trackingNumber;
+  document.getElementById('chatWidget').style.display = 'block';
+  loadAllMessages();
 }
 
 function infoRow(label, value) {
-  return `<div class="info-row"><span class="label">${label}</span><span class="value">${value || '—'}</span></div>`;
+  return '<div class="info-row"><span class="label">' + label + '</span><span class="value">' + (value || '—') + '</span></div>';
 }
 
 function statusClass(s) {
-  const map = { 'Picked Up':'status-picked','In Transit':'status-transit','In Customs':'status-customs','Out for Delivery':'status-delivery','Delivered':'status-delivered','Cancelled':'status-cancelled' };
-  return map[s] || 'status-picked';
+  var m = { 'Picked Up':'status-picked','In Transit':'status-transit','In Customs':'status-customs','Out for Delivery':'status-delivery','Delivered':'status-delivered','Cancelled':'status-cancelled' };
+  return m[s] || 'status-picked';
 }
 
 function statusIcon(s) {
-  const icons = { 'Picked Up':'📦','In Transit':'🚚','In Customs':'🛃','Out for Delivery':'🏃','Delivered':'✅','Cancelled':'❌' };
+  var icons = { 'Picked Up':'📦','In Transit':'🚚','In Customs':'🛃','Out for Delivery':'🏃','Delivered':'✅','Cancelled':'❌' };
   return icons[s] || '📦';
 }
 
 // ─── Timeline ──────────────────
 function renderTimeline(history) {
-  const el = document.getElementById('timeline');
+  var el = document.getElementById('timeline');
   if (!history || !history.length) { el.innerHTML = '<p style="color:var(--text-dim)">No tracking history yet</p>'; return; }
-  const reversed = [...history].reverse();
-  el.innerHTML = reversed.map((h, i) => `
-    <div class="timeline-item">
-      <div class="timeline-dot ${i === 0 ? 'active' : 'completed'}">
-        ${i === 0 ? '●' : '✓'}
-      </div>
-      <div class="timeline-content">
-        <h4>${h.status}</h4>
-        <p>${h.note || 'Status updated'}</p>
-        <time>${new Date(h.timestamp).toLocaleString()}</time>
-      </div>
-    </div>
-  `).join('');
+  var reversed = history.slice().reverse();
+  el.innerHTML = reversed.map(function(h, i) {
+    return '<div class="timeline-item"><div class="timeline-dot ' + (i === 0 ? 'active' : 'completed') + '">' + (i === 0 ? '●' : '✓') + '</div><div class="timeline-content"><h4>' + h.status + '</h4><p>' + (h.note || 'Status updated') + '</p><time>' + new Date(h.timestamp).toLocaleString() + '</time></div></div>';
+  }).join('');
 }
 
 // ─── Map ───────────────────────
 function renderMap(data) {
   if (map) { map.remove(); map = null; }
   map = L.map('trackingMap').setView([20, 0], 3);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
-  }).addTo(map);
-
-  const bounds = [];
-
-  // Origin marker
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+  var bounds = [];
   if (data.originCoords) {
-    const pos = [data.originCoords.lat, data.originCoords.lng];
-    originMarker = L.marker(pos, { icon: createIcon('#3b82f6', '📦') }).addTo(map).bindPopup(`<strong>Origin</strong><br>${data.originAddress}`);
+    var pos = [data.originCoords.lat, data.originCoords.lng];
+    originMarker = L.marker(pos, { icon: createIcon('#3b82f6', '📦') }).addTo(map).bindPopup('<strong>Origin</strong><br>' + data.originAddress);
     bounds.push(pos);
   }
-
-  // Destination marker
   if (data.destCoords) {
-    const pos = [data.destCoords.lat, data.destCoords.lng];
-    destMarker = L.marker(pos, { icon: createIcon('#10b981', '🏠') }).addTo(map).bindPopup(`<strong>Destination</strong><br>${data.receiverAddress}`);
-    bounds.push(pos);
+    var pos2 = [data.destCoords.lat, data.destCoords.lng];
+    destMarker = L.marker(pos2, { icon: createIcon('#10b981', '🏠') }).addTo(map).bindPopup('<strong>Destination</strong><br>' + data.receiverAddress);
+    bounds.push(pos2);
   }
-
-  // Current location marker (the moving one)
   if (data.currentLocation) {
-    const pos = [data.currentLocation.lat, data.currentLocation.lng];
-    currentMarker = L.marker(pos, { icon: createMovingIcon() }).addTo(map).bindPopup('<strong>Current Location</strong><br>Package is here');
-    bounds.push(pos);
+    var pos3 = [data.currentLocation.lat, data.currentLocation.lng];
+    currentMarker = L.marker(pos3, { icon: createMovingIcon() }).addTo(map).bindPopup('<strong>Current Location</strong><br>Package is here');
+    bounds.push(pos3);
   }
-
-  // Route line from location history
   if (data.locationHistory && data.locationHistory.length > 0) {
-    const trail = data.locationHistory.map(l => [l.lat, l.lng]);
+    var trail = data.locationHistory.map(function(l) { return [l.lat, l.lng]; });
     routeLine = L.polyline(trail, { color: '#3b82f6', weight: 3, opacity: 0.6, dashArray: '8,8' }).addTo(map);
   }
-
-  // Draw dashed line from origin to dest
   if (data.originCoords && data.destCoords) {
-    L.polyline(
-      [[data.originCoords.lat, data.originCoords.lng], [data.destCoords.lat, data.destCoords.lng]],
-      { color: '#94a3b8', weight: 2, opacity: 0.4, dashArray: '10,10' }
-    ).addTo(map);
+    L.polyline([[data.originCoords.lat, data.originCoords.lng], [data.destCoords.lat, data.destCoords.lng]], { color: '#94a3b8', weight: 2, opacity: 0.4, dashArray: '10,10' }).addTo(map);
   }
-
-  if (bounds.length >= 2) {
-    map.fitBounds(bounds, { padding: [50, 50] });
-  } else if (bounds.length === 1) {
-    map.setView(bounds[0], 12);
-  }
+  if (bounds.length >= 2) map.fitBounds(bounds, { padding: [50, 50] });
+  else if (bounds.length === 1) map.setView(bounds[0], 12);
 }
 
 function createIcon(color, emoji) {
-  return L.divIcon({
-    className: '',
-    html: `<div style="background:${color};width:36px;height:36px;border-radius:50%;border:3px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:16px">${emoji}</div>`,
-    iconSize: [36, 36], iconAnchor: [18, 18]
-  });
+  return L.divIcon({ className: '', html: '<div style="background:' + color + ';width:36px;height:36px;border-radius:50%;border:3px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:16px">' + emoji + '</div>', iconSize: [36, 36], iconAnchor: [18, 18] });
 }
-
 function createMovingIcon() {
-  return L.divIcon({
-    className: '',
-    html: `<div style="position:relative">
-      <div style="width:20px;height:20px;background:#ef4444;border-radius:50%;border:3px solid #fff;box-shadow:0 3px 12px rgba(239,68,68,.5);position:relative;z-index:2"></div>
-      <div style="position:absolute;inset:-8px;background:rgba(239,68,68,.2);border-radius:50%;animation:pulse-ring 2s infinite"></div>
-    </div>`,
-    iconSize: [20, 20], iconAnchor: [10, 10]
-  });
+  return L.divIcon({ className: '', html: '<div style="position:relative"><div style="width:20px;height:20px;background:#ef4444;border-radius:50%;border:3px solid #fff;box-shadow:0 3px 12px rgba(239,68,68,.5);position:relative;z-index:2"></div><div style="position:absolute;inset:-8px;background:rgba(239,68,68,.2);border-radius:50%;animation:pulse-ring 2s infinite"></div></div>', iconSize: [20, 20], iconAnchor: [10, 10] });
 }
 
-// ─── Live SSE ──────────────────
+// ─── Live SSE (with chat support built in) ──────────────────
 function connectLive(tn) {
   if (evtSource) evtSource.close();
-  evtSource = new EventSource(`${API}/api/track/live?tn=${encodeURIComponent(tn)}`);
-  evtSource.onmessage = (e) => {
+  evtSource = new EventSource(API + '/api/track/live?tn=' + encodeURIComponent(tn));
+  evtSource.onmessage = function(e) {
     try {
-      const data = JSON.parse(e.data);
+      var data = JSON.parse(e.data);
+
+      // Location updates
       if (data.type === 'location_update') {
-        // Update marker position
         if (currentMarker && data.currentLocation) {
           currentMarker.setLatLng([data.currentLocation.lat, data.currentLocation.lng]);
-          // Add to trail
           if (routeLine) {
-            const latlngs = routeLine.getLatLngs();
+            var latlngs = routeLine.getLatLngs();
             latlngs.push(L.latLng(data.currentLocation.lat, data.currentLocation.lng));
             routeLine.setLatLngs(latlngs);
           } else {
@@ -570,243 +533,176 @@ function connectLive(tn) {
         } else if (data.currentLocation && map) {
           currentMarker = L.marker([data.currentLocation.lat, data.currentLocation.lng], { icon: createMovingIcon() }).addTo(map);
         }
-        // Update status if changed
         if (data.status && currentData) {
           currentData.status = data.status;
-          document.getElementById('statusBadgeContainer').innerHTML = `<div class="status-badge ${statusClass(data.status)}">${statusIcon(data.status)} ${data.status}</div>`;
+          document.getElementById('statusBadgeContainer').innerHTML = '<div class="status-badge ' + statusClass(data.status) + '">' + statusIcon(data.status) + ' ' + data.status + '</div>';
         }
         if (data.statusHistory) renderTimeline(data.statusHistory);
       }
+
+      // Status updates
       if (data.type === 'status_update') {
-        if (data.status) {
-          document.getElementById('statusBadgeContainer').innerHTML = `<div class="status-badge ${statusClass(data.status)}">${statusIcon(data.status)} ${data.status}</div>`;
-        }
+        if (data.status) document.getElementById('statusBadgeContainer').innerHTML = '<div class="status-badge ' + statusClass(data.status) + '">' + statusIcon(data.status) + ' ' + data.status + '</div>';
         if (data.statusHistory) renderTimeline(data.statusHistory);
       }
-    } catch {}
+
+      // ── NEW MESSAGE via SSE — reload both inline + floating chats ──
+      if (data.type === 'new_message') {
+        loadAllMessages();
+        if (!chatOpen) {
+          var btn = document.getElementById('chatToggleBtn');
+          if (!btn.querySelector('.notif')) {
+            var dot = document.createElement('span');
+            dot.className = 'notif';
+            dot.textContent = '!';
+            btn.appendChild(dot);
+          }
+        }
+      }
+    } catch(err) {}
   };
 }
 
 // Pulse ring animation
-const style = document.createElement('style');
-style.textContent = `@keyframes pulse-ring{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.5);opacity:0}}`;
-document.head.appendChild(style);
+var pulseStyle = document.createElement('style');
+pulseStyle.textContent = '@keyframes pulse-ring{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.5);opacity:0}}';
+document.head.appendChild(pulseStyle);
 
-// ═══ CHAT WIDGET ═══════════════
-let chatOpen = false;
-let clientPendingFile = null;
-let currentTN = null;
+// ═══════════════════════════════════════════════════
+//  UNIFIED MESSAGE SYSTEM
+// ═══════════════════════════════════════════════════
 
+// Single function to load messages and update BOTH inline + floating chat
+function loadAllMessages() {
+  if (!currentTN) return;
+  fetch(API + '/api/chat/messages?tn=' + encodeURIComponent(currentTN))
+    .then(function(r) { if (!r.ok) throw new Error('fail'); return r.json(); })
+    .then(function(messages) {
+      renderInlineMessages(messages);
+      renderFloatingChat(messages);
+    })
+    .catch(function(err) { console.error('Failed to load messages:', err); });
+}
+
+// ─── Floating Chat Widget ─────────────
 function toggleChat() {
   chatOpen = !chatOpen;
   document.getElementById('chatPanel').classList.toggle('open', chatOpen);
-  if (chatOpen && currentTN) loadClientMessages();
+  if (chatOpen) {
+    var notif = document.getElementById('chatToggleBtn').querySelector('.notif');
+    if (notif) notif.remove();
+    if (currentTN) loadAllMessages();
+  }
 }
 
-function showChatWidget(tn) {
-  currentTN = tn;
-  document.getElementById('chatWidget').style.display = 'block';
-  loadClientMessages();
-}
-
-function hideChatWidget() {
-  document.getElementById('chatWidget').style.display = 'none';
-  currentTN = null;
-  chatOpen = false;
-  document.getElementById('chatPanel').classList.remove('open');
-}
-
-async function loadClientMessages() {
-  if (!currentTN) return;
-  try {
-    const r = await fetch(`${API}/api/chat/messages?tn=${encodeURIComponent(currentTN)}`);
-    if (!r.ok) return;
-    const messages = await r.json();
-    renderClientChat(messages);
-  } catch {}
-}
-
-function renderClientChat(messages) {
-  const el = document.getElementById('chatBody');
-  if (!messages.length) {
+function renderFloatingChat(messages) {
+  var el = document.getElementById('chatBody');
+  if (!messages || !messages.length) {
     el.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:30px;font-size:13px">Send a message to the delivery team. All messages are end-to-end encrypted.</p>';
     return;
   }
-  el.innerHTML = messages.map(m => {
-    const isClient = m.sender === 'client';
-    let fileHtml = '';
+  el.innerHTML = messages.map(function(m) {
+    var isClient = m.sender === 'client';
+    var fileHtml = '';
     if (m.fileData && m.fileType && m.fileType.startsWith('image/')) {
-      fileHtml = `<img src="${m.fileData}" class="bubble-img" onclick="document.getElementById('imgPreviewSrc').src='${m.fileData.replace(/'/g,"\\'")}';document.getElementById('imgOverlay').classList.add('show')">`;
+      fileHtml = '<img src="' + m.fileData + '" class="bubble-img" onclick="previewImage(this.src)">';
     } else if (m.fileData && m.fileName) {
-      fileHtml = `<a href="${m.fileData}" download="${m.fileName}" class="bubble-file"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3"/></svg>${m.fileName}</a>`;
+      fileHtml = '<a href="' + m.fileData + '" download="' + m.fileName + '" class="bubble-file"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3"/></svg>' + m.fileName + '</a>';
     }
-    return `<div class="chat-bubble ${isClient?'client':'admin'}">
-      ${m.text||''}${fileHtml}
-      <span class="bubble-time">${new Date(m.timestamp).toLocaleString()}</span>
-    </div>`;
+    return '<div class="chat-bubble ' + (isClient ? 'client' : 'admin') + '">' +
+      (m.text || '') + fileHtml +
+      '<span class="bubble-time">' + new Date(m.timestamp).toLocaleString() + '</span></div>';
   }).join('');
   el.scrollTop = el.scrollHeight;
 }
 
-async function sendClientMsg() {
+function sendClientMsg() {
   if (!currentTN) return;
-  const input = document.getElementById('clientMsgInput');
-  const text = input.value.trim();
+  var input = document.getElementById('clientMsgInput');
+  var text = input.value.trim();
   if (!text && !clientPendingFile) return;
-  const body = { trackingNumber: currentTN, text };
+  var body = { trackingNumber: currentTN, text: text };
   if (clientPendingFile) { body.fileName = clientPendingFile.name; body.fileData = clientPendingFile.data; body.fileType = clientPendingFile.type; }
-  try {
-    await fetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    input.value = '';
-    clientPendingFile = null;
-    loadClientMessages();
-  } catch {}
+  fetch(API + '/api/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    .then(function(r) { if (r.ok) { input.value = ''; clientPendingFile = null; loadAllMessages(); } })
+    .catch(function(err) { console.error('Send failed:', err); });
 }
 
 function handleClientFile(e) {
-  const file = e.target.files[0];
+  var file = e.target.files[0];
   if (!file) return;
   if (file.size > 5 * 1024 * 1024) { alert('File must be under 5MB'); return; }
-  const reader = new FileReader();
-  reader.onload = () => {
+  var reader = new FileReader();
+  reader.onload = function() {
     clientPendingFile = { name: file.name, data: reader.result, type: file.type };
-    document.getElementById('clientMsgInput').value = `📎 ${file.name}`;
+    document.getElementById('clientMsgInput').value = '📎 ' + file.name;
     document.getElementById('clientMsgInput').focus();
   };
   reader.readAsDataURL(file);
   e.target.value = '';
 }
 
-// Show chat widget when tracking result loads
-const origRenderResults = renderResults;
-renderResults = function(data) {
-  origRenderResults(data);
-  showChatWidget(data.trackingNumber);
-};
-
-const origShowHome = showHome;
-showHome = function() {
-  origShowHome();
-  hideChatWidget();
-};
-
-// Listen for new messages via SSE
-const origConnectLive = connectLive;
-connectLive = function(tn) {
-  origConnectLive(tn);
-  // Override the SSE handler to also handle chat
-  if (evtSource) {
-    const origHandler = evtSource.onmessage;
-    evtSource.onmessage = (e) => {
-      origHandler(e);
-      try {
-        const data = JSON.parse(e.data);
-        if (data.type === 'new_message') {
-          loadClientMessages();
-          // Show notification dot if chat is closed
-          if (!chatOpen) {
-            const btn = document.getElementById('chatToggleBtn');
-            if (!btn.querySelector('.notif')) {
-              const dot = document.createElement('span');
-              dot.className = 'notif';
-              dot.textContent = '!';
-              btn.appendChild(dot);
-            }
-          }
-        }
-      } catch {}
-    };
-  }
-};
-
-// Remove notification when opening chat
-const origToggle = toggleChat;
-toggleChat = function() {
-  origToggle();
-  if (chatOpen) {
-    const notif = document.getElementById('chatToggleBtn').querySelector('.notif');
-    if (notif) notif.remove();
-  }
-};
-
-// ═══ INLINE MESSAGES (inside tracking result) ═══
-let inlinePendingFile = null;
-
+// ─── Inline Messages Card ─────────────
 function renderInlineMessages(messages) {
-  const el = document.getElementById('inlineMessages');
-  const countEl = document.getElementById('msgCount');
+  var el = document.getElementById('inlineMessages');
+  var countEl = document.getElementById('msgCount');
   if (!messages || !messages.length) {
     el.innerHTML = '<p style="color:var(--text-dim);text-align:center;padding:20px;font-size:13px">No messages yet. Send a message to the delivery team.</p>';
     countEl.textContent = '';
     return;
   }
-  countEl.textContent = `(${messages.length})`;
-  el.innerHTML = messages.map(m => {
-    const isClient = m.sender === 'client';
-    let fileHtml = '';
+  countEl.textContent = '(' + messages.length + ')';
+  el.innerHTML = messages.map(function(m) {
+    var isClient = m.sender === 'client';
+    var fileHtml = '';
     if (m.fileData && m.fileType && m.fileType.startsWith('image/')) {
-      fileHtml = `<img src="${m.fileData}" style="max-width:200px;max-height:150px;border-radius:8px;margin-top:6px;cursor:pointer" onclick="document.getElementById('imgPreviewSrc').src=this.src;document.getElementById('imgOverlay').classList.add('show')">`;
+      fileHtml = '<img src="' + m.fileData + '" style="max-width:200px;max-height:150px;border-radius:8px;margin-top:6px;cursor:pointer" onclick="previewImage(this.src)">';
     } else if (m.fileData && m.fileName) {
-      fileHtml = `<a href="${m.fileData}" download="${m.fileName}" style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:6px 10px;background:rgba(0,0,0,.06);border-radius:8px;font-size:12px;text-decoration:none;color:inherit"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3"/></svg>${m.fileName}</a>`;
+      fileHtml = '<a href="' + m.fileData + '" download="' + m.fileName + '" style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:6px 10px;background:rgba(0,0,0,.06);border-radius:8px;font-size:12px;text-decoration:none;color:inherit"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3"/></svg>' + m.fileName + '</a>';
     }
-    return `<div style="max-width:80%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.5;word-wrap:break-word;${isClient?'background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px':'background:var(--surface-alt,#e2e8f0);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px'}">
-      <div style="font-size:11px;font-weight:600;margin-bottom:2px;opacity:.7">${isClient?'You':'TrackMyShip'}</div>
-      ${m.text||''}${fileHtml}
-      <span style="font-size:10px;opacity:.5;margin-top:4px;display:block">${new Date(m.timestamp).toLocaleString()}</span>
-    </div>`;
+    var bgStyle = isClient ? 'background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px' : 'background:#e2e8f0;color:var(--text);align-self:flex-start;border-bottom-left-radius:4px';
+    return '<div style="max-width:80%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.5;word-wrap:break-word;' + bgStyle + '">' +
+      '<div style="font-size:11px;font-weight:600;margin-bottom:2px;opacity:.7">' + (isClient ? 'You' : 'TrackMyShip') + '</div>' +
+      (m.text || '') + fileHtml +
+      '<span style="font-size:10px;opacity:.5;margin-top:4px;display:block">' + new Date(m.timestamp).toLocaleString() + '</span></div>';
   }).join('');
   el.scrollTop = el.scrollHeight;
 }
 
-async function loadInlineMessages() {
+function sendInlineMsg() {
   if (!currentTN) return;
-  try {
-    const r = await fetch(`${API}/api/chat/messages?tn=${encodeURIComponent(currentTN)}`);
-    if (!r.ok) return;
-    const messages = await r.json();
-    renderInlineMessages(messages);
-    renderClientChat(messages); // also update floating chat
-  } catch {}
-}
-
-async function sendInlineMsg() {
-  if (!currentTN) return;
-  const input = document.getElementById('inlineMsgInput');
-  const text = input.value.trim();
+  var input = document.getElementById('inlineMsgInput');
+  var text = input.value.trim();
   if (!text && !inlinePendingFile) return;
-  const body = { trackingNumber: currentTN, text };
+  var body = { trackingNumber: currentTN, text: text };
   if (inlinePendingFile) { body.fileName = inlinePendingFile.name; body.fileData = inlinePendingFile.data; body.fileType = inlinePendingFile.type; }
-  try {
-    await fetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    input.value = '';
-    inlinePendingFile = null;
-    loadInlineMessages();
-  } catch {}
+  fetch(API + '/api/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    .then(function(r) { if (r.ok) { input.value = ''; inlinePendingFile = null; loadAllMessages(); } })
+    .catch(function(err) { console.error('Inline send failed:', err); });
 }
 
 function handleInlineFile(e) {
-  const file = e.target.files[0];
+  var file = e.target.files[0];
   if (!file) return;
   if (file.size > 5 * 1024 * 1024) { alert('File must be under 5MB'); return; }
-  const reader = new FileReader();
-  reader.onload = () => {
+  var reader = new FileReader();
+  reader.onload = function() {
     inlinePendingFile = { name: file.name, data: reader.result, type: file.type };
-    document.getElementById('inlineMsgInput').value = `📎 ${file.name}`;
+    document.getElementById('inlineMsgInput').value = '📎 ' + file.name;
     document.getElementById('inlineMsgInput').focus();
   };
   reader.readAsDataURL(file);
   e.target.value = '';
 }
 
-// Override renderResults to also load inline messages
-const origRenderResults2 = renderResults;
-renderResults = function(data) {
-  origRenderResults2(data);
-  loadInlineMessages();
-};
+// ─── Image preview helper ─────
+function previewImage(src) {
+  document.getElementById('imgPreviewSrc').src = src;
+  document.getElementById('imgOverlay').classList.add('show');
+}
 
-// Poll for messages every 15 seconds (both inline and floating)
-setInterval(() => { if (currentTN) loadInlineMessages(); }, 15000);
+// ─── Poll for messages every 15 seconds ─────
+setInterval(function() { if (currentTN) loadAllMessages(); }, 15000);
 </script>
 </body>
 </html>
