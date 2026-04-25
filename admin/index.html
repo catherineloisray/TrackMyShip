@@ -118,7 +118,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
 
 <div class="dashboard" id="dashboard">
   <div class="sidebar">
-    <div class="brand"><h2>📦 TrackMyShip</h2><span>Admin Dashboard</span></div>
+    <div class="brand"><h2>📦 TrackMyShip</h2><span>Logged in as <strong id="adminNameDisplay">—</strong></span></div>
     <nav>
       <a href="#" class="active" onclick="showSection('overview')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
@@ -281,8 +281,9 @@ tr:hover td{background:rgba(255,255,255,.03)}
 let authToken = null, shipments = [], gpsWatchId = null, gpsMap = null, gpsMarker = null;
 let formMap = null, originMarker = null, destMarker = null, clickMode = 'origin';
 let currentChatShipment = null, pendingFile = null;
+let loggedInAdmin = null;
 const API = window.location.pathname.replace(/\/+$/, '');
-const APP_VERSION = 'v2.2';
+const APP_VERSION = 'v3.0';
 console.log('[TrackMyShip Admin ' + APP_VERSION + '] loaded at ' + new Date().toISOString());
 
 // ─── Auth ──────────────────────
@@ -291,11 +292,11 @@ async function doLogin() {
   try {
     const r = await fetch(`${API}/api/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:user,password:pass}) });
     const d = await r.json();
-    if (r.ok) { authToken=d.token; document.getElementById('loginScreen').style.display='none'; document.getElementById('dashboard').style.display='block'; loadShipments(); initFormMap(); }
+    if (r.ok) { authToken=d.token; loggedInAdmin=d.username||d.adminId; document.getElementById('loginScreen').style.display='none'; document.getElementById('dashboard').style.display='block'; document.getElementById('adminNameDisplay').textContent=loggedInAdmin; loadShipments(); initFormMap(); }
     else document.getElementById('loginError').textContent = d.error||'Login failed';
   } catch{ document.getElementById('loginError').textContent='Server connection failed'; }
 }
-function doLogout(){ authToken=null; stopGPS(); document.getElementById('loginScreen').style.display='flex'; document.getElementById('dashboard').style.display='none'; }
+function doLogout(){ authToken=null; loggedInAdmin=null; stopGPS(); document.getElementById('loginScreen').style.display='flex'; document.getElementById('dashboard').style.display='none'; }
 document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 
 async function apiFetch(path, opts={}) {

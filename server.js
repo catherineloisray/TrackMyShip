@@ -8,10 +8,45 @@ const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data', 'shipments.json');
 const UPLOADS_DIR = path.join(__dirname, 'data', 'uploads');
 // IMPORTANT: Use a stable key so it survives server restarts on Render.
-// A random key would break all existing messages and admin sessions after every restart.
-const ADMIN_SECRET = crypto.createHash('sha256').update('TrackMyShip2026!-stable-admin-key-v1').digest('hex');
+const MASTER_SECRET = crypto.createHash('sha256').update('TrackMyShip2026!-stable-admin-key-v1').digest('hex');
 const ADMIN_PATH = '/ctrl-panel-9v7k2m';
 const MAX_BODY = 10 * 1024 * 1024; // 10MB max upload
+
+// ─── Multi-Admin Accounts (20 admins) ────────────────────────────
+// Each admin gets a unique username and password.
+// Tokens are derived deterministically from the master secret so they survive restarts.
+const ADMINS = [
+  { id: 'admin1',  username: 'admin1',  password: 'Ship@Secure01' },
+  { id: 'admin2',  username: 'admin2',  password: 'Ship@Secure02' },
+  { id: 'admin3',  username: 'admin3',  password: 'Ship@Secure03' },
+  { id: 'admin4',  username: 'admin4',  password: 'Ship@Secure04' },
+  { id: 'admin5',  username: 'admin5',  password: 'Ship@Secure05' },
+  { id: 'admin6',  username: 'admin6',  password: 'Ship@Secure06' },
+  { id: 'admin7',  username: 'admin7',  password: 'Ship@Secure07' },
+  { id: 'admin8',  username: 'admin8',  password: 'Ship@Secure08' },
+  { id: 'admin9',  username: 'admin9',  password: 'Ship@Secure09' },
+  { id: 'admin10', username: 'admin10', password: 'Ship@Secure10' },
+  { id: 'admin11', username: 'admin11', password: 'Ship@Secure11' },
+  { id: 'admin12', username: 'admin12', password: 'Ship@Secure12' },
+  { id: 'admin13', username: 'admin13', password: 'Ship@Secure13' },
+  { id: 'admin14', username: 'admin14', password: 'Ship@Secure14' },
+  { id: 'admin15', username: 'admin15', password: 'Ship@Secure15' },
+  { id: 'admin16', username: 'admin16', password: 'Ship@Secure16' },
+  { id: 'admin17', username: 'admin17', password: 'Ship@Secure17' },
+  { id: 'admin18', username: 'admin18', password: 'Ship@Secure18' },
+  { id: 'admin19', username: 'admin19', password: 'Ship@Secure19' },
+  { id: 'admin20', username: 'admin20', password: 'Ship@Secure20' }
+];
+
+// Generate a deterministic token for each admin (survives server restarts)
+function getAdminToken(adminId) {
+  return crypto.createHmac('sha256', MASTER_SECRET).update('admin-token:' + adminId).digest('hex');
+}
+
+// Look up which admin owns a token
+function getAdminByToken(token) {
+  return ADMINS.find(a => getAdminToken(a.id) === token) || null;
+}
 
 // ─── Data helpers ────────────────────────────────────────────────
 if (!fs.existsSync(path.join(__dirname, 'data'))) fs.mkdirSync(path.join(__dirname, 'data'));
@@ -34,7 +69,7 @@ function generateTrackingNumber() {
 // ─── Encryption helpers (AES-256-GCM) ───────────────────────────
 // Each shipment gets its own encryption key derived from a master + tracking number
 function deriveKey(trackingNumber) {
-  return crypto.createHash('sha256').update(ADMIN_SECRET + trackingNumber + 'e2e-chat').digest();
+  return crypto.createHash('sha256').update(MASTER_SECRET + trackingNumber + 'e2e-chat').digest();
 }
 function encryptMessage(text, trackingNumber) {
   const key = deriveKey(trackingNumber);
@@ -261,22 +296,27 @@ const server = http.createServer(async (req, res) => {
   //  ADMIN API ROUTES
   // ═══════════════════════════════════════════════════════════════
 
-  // Admin Login
+  // Admin Login — checks against all 20 admin accounts
   if (pathname === `${ADMIN_PATH}/api/login` && req.method === 'POST') {
     const body = await parseBody(req);
-    console.log('[LOGIN] Attempt — username:', body.username, '| password length:', (body.password||'').length, '| has password:', !!body.password);
-    if (body.username === 'admin' && body.password === 'TrackMyShip2026!') {
-      console.log('[LOGIN] Success');
-      return jsonRes(res, 200, { token: ADMIN_SECRET, message: 'Login successful' });
+    console.log('[LOGIN] Attempt — username:', body.username, '| password length:', (body.password||'').length);
+    const admin = ADMINS.find(a => a.username === body.username && a.password === body.password);
+    if (admin) {
+      const token = getAdminToken(admin.id);
+      console.log('[LOGIN] Success —', admin.id);
+      return jsonRes(res, 200, { token, adminId: admin.id, username: admin.username, message: 'Login successful' });
     }
     console.log('[LOGIN] Failed — credentials mismatch');
     return jsonRes(res, 401, { error: 'Invalid credentials' });
   }
 
-  // Protect admin API
+  // Protect admin API — validate token and attach admin identity to request
+  let currentAdmin = null;
   if (pathname.startsWith(`${ADMIN_PATH}/api/`) && pathname !== `${ADMIN_PATH}/api/login`) {
     const auth = req.headers.authorization;
-    if (!auth || auth !== `Bearer ${ADMIN_SECRET}`) {
+    const token = auth ? auth.replace('Bearer ', '') : '';
+    currentAdmin = getAdminByToken(token);
+    if (!currentAdmin) {
       return jsonRes(res, 403, { error: 'Unauthorized' });
     }
   }
@@ -307,16 +347,18 @@ const server = http.createServer(async (req, res) => {
       statusHistory: [
         { status: 'Picked Up', timestamp: new Date().toISOString(), note: 'Shipment created and picked up' }
       ],
-      messages: []
+      messages: [],
+      createdBy: currentAdmin.id
     };
     shipments.push(shipment);
     saveShipments(shipments);
     return jsonRes(res, 201, shipment);
   }
 
-  // Admin: List shipments
+  // Admin: List shipments — each admin only sees their OWN shipments
   if (pathname === `${ADMIN_PATH}/api/shipments` && req.method === 'GET') {
-    const shipments = loadShipments();
+    const allShipments = loadShipments();
+    const shipments = allShipments.filter(s => s.createdBy === currentAdmin.id);
     // Decrypt messages for admin view and add unread count
     const withDecrypted = shipments.map(s => ({
       ...s,
@@ -331,10 +373,10 @@ const server = http.createServer(async (req, res) => {
     const parts = pathname.replace(ADMIN_PATH, '').split('/');
     const id = parts[3];
     const body = await parseBody(req);
-    console.log('[CHAT] Admin sending message to shipment:', id, '| text length:', (body.text||'').length, '| hasFile:', !!body.fileData);
+    console.log('[CHAT]', currentAdmin.id, 'sending message to shipment:', id);
     const shipments = loadShipments();
-    const idx = shipments.findIndex(s => s.id === id);
-    if (idx === -1) { console.log('[CHAT] ERROR: Shipment not found for id', id); return jsonRes(res, 404, { error: 'Not found' }); }
+    const idx = shipments.findIndex(s => s.id === id && s.createdBy === currentAdmin.id);
+    if (idx === -1) { console.log('[CHAT] ERROR: Shipment not found or not owned'); return jsonRes(res, 404, { error: 'Not found' }); }
     if (!shipments[idx].messages) shipments[idx].messages = [];
     const tn = shipments[idx].trackingNumber;
     const msg = {
@@ -362,7 +404,7 @@ const server = http.createServer(async (req, res) => {
     const parts = pathname.replace(ADMIN_PATH, '').split('/');
     const id = parts[3];
     const shipments = loadShipments();
-    const idx = shipments.findIndex(s => s.id === id);
+    const idx = shipments.findIndex(s => s.id === id && s.createdBy === currentAdmin.id);
     if (idx === -1) return jsonRes(res, 404, { error: 'Not found' });
     (shipments[idx].messages || []).forEach(m => { if (m.sender === 'client') m.read = true; });
     saveShipments(shipments);
@@ -375,7 +417,7 @@ const server = http.createServer(async (req, res) => {
     const id = parts[3];
     const body = await parseBody(req);
     const shipments = loadShipments();
-    const idx = shipments.findIndex(s => s.id === id);
+    const idx = shipments.findIndex(s => s.id === id && s.createdBy === currentAdmin.id);
     if (idx === -1) return jsonRes(res, 404, { error: 'Not found' });
     shipments[idx].status = body.status;
     shipments[idx].statusHistory.push({ status: body.status, timestamp: new Date().toISOString(), note: body.note || '' });
@@ -390,7 +432,7 @@ const server = http.createServer(async (req, res) => {
     const id = parts[3];
     const body = await parseBody(req);
     const shipments = loadShipments();
-    const idx = shipments.findIndex(s => s.id === id);
+    const idx = shipments.findIndex(s => s.id === id && s.createdBy === currentAdmin.id);
     if (idx === -1) return jsonRes(res, 404, { error: 'Not found' });
     const loc = { lat: body.lat, lng: body.lng, timestamp: new Date().toISOString() };
     shipments[idx].currentLocation = loc;
@@ -410,11 +452,13 @@ const server = http.createServer(async (req, res) => {
     return jsonRes(res, 200, { success: true });
   }
 
-  // Admin: Delete shipment
+  // Admin: Delete shipment (only own)
   if (pathname.startsWith(`${ADMIN_PATH}/api/shipments/`) && req.method === 'DELETE') {
     const parts = pathname.replace(ADMIN_PATH, '').split('/');
     const id = parts[3];
     let shipments = loadShipments();
+    const target = shipments.find(s => s.id === id);
+    if (!target || target.createdBy !== currentAdmin.id) return jsonRes(res, 404, { error: 'Not found' });
     shipments = shipments.filter(s => s.id !== id);
     saveShipments(shipments);
     return jsonRes(res, 200, { success: true });
@@ -426,7 +470,7 @@ const server = http.createServer(async (req, res) => {
     const shipments = loadShipments();
     let updated = 0;
     shipments.forEach((s, idx) => {
-      if (s.status !== 'Delivered' && s.status !== 'Cancelled') {
+      if (s.createdBy === currentAdmin.id && s.status !== 'Delivered' && s.status !== 'Cancelled') {
         const loc = { lat: body.lat, lng: body.lng, timestamp: new Date().toISOString() };
         shipments[idx].currentLocation = loc;
         shipments[idx].locationHistory.push(loc);
@@ -472,14 +516,13 @@ const server = http.createServer(async (req, res) => {
 // ─── Start server ────────────────────────────────────────────────
 server.listen(PORT, () => {
   console.log(`\n╔══════════════════════════════════════════════════════╗`);
-  console.log(`║          🚚  TrackMyShip Server Running  🚚          ║`);
+  console.log(`║          🚚  TrackMyShip Server v3.0  🚚             ║`);
   console.log(`╠══════════════════════════════════════════════════════╣`);
   console.log(`║  Client Tracking:  http://localhost:${PORT}               ║`);
   console.log(`║  Admin Dashboard:  http://localhost:${PORT}${ADMIN_PATH}  ║`);
   console.log(`╠══════════════════════════════════════════════════════╣`);
-  console.log(`║  Admin Login:                                        ║`);
-  console.log(`║    Username: admin                                    ║`);
-  console.log(`║    Password: TrackMyShip2026!                         ║`);
+  console.log(`║  Multi-Admin: ${ADMINS.length} accounts (admin1–admin${ADMINS.length})        ║`);
+  console.log(`║  Each admin sees only their own shipments             ║`);
   console.log(`║  E2E Encrypted Chat: ENABLED                         ║`);
   console.log(`╚══════════════════════════════════════════════════════╝\n`);
 
