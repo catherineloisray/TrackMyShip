@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrackMyShip — Virtual Banking</title>
+<title>TrackHub — Banking</title>
 <style>
 :root{--primary:#0a2463;--primary-light:#1e3a8a;--accent:#3b82f6;--success:#10b981;--warning:#f59e0b;--danger:#ef4444;--bg:#f8fafc;--surface:#ffffff;--surface-alt:#f1f5f9;--text:#0f172a;--text-dim:#64748b;--border:#e2e8f0;--radius:12px;--shadow:0 4px 24px rgba(0,0,0,.06);--gold:#d4a843;--gold-light:#f5e6c8}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -48,12 +48,15 @@ a{text-decoration:none;color:inherit}
 .balance-label{font-size:13px;opacity:.7;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
 .balance-amount{font-size:48px;font-weight:800;margin-bottom:8px}
 .balance-account{font-size:14px;opacity:.6}
-.balance-actions{display:flex;gap:12px;margin-top:20px}
+.balance-actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
 .balance-actions button{padding:10px 20px;border-radius:10px;border:none;font-weight:600;font-size:14px;cursor:pointer;transition:all .2s}
 .btn-transfer{background:rgba(255,255,255,.2);color:#fff;backdrop-filter:blur(4px)}
 .btn-transfer:hover{background:rgba(255,255,255,.35)}
 .btn-card{background:var(--gold);color:#000}
 .btn-card:hover{background:#c49a38}
+.btn-chat{background:rgba(16,185,129,.3);color:#fff;position:relative}
+.btn-chat:hover{background:rgba(16,185,129,.5)}
+.chat-badge{position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;min-width:18px;text-align:center}
 
 /* Grid */
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
@@ -112,6 +115,29 @@ a{text-decoration:none;color:inherit}
 .tx-balance{font-size:11px;color:var(--text-dim);text-align:right}
 .empty-tx{text-align:center;padding:40px;color:var(--text-dim);font-size:14px}
 
+/* Chat Panel */
+.chat-panel{display:none;margin-bottom:24px}
+.chat-messages{height:350px;overflow-y:auto;padding:16px;background:var(--surface-alt);border-radius:var(--radius);margin-bottom:12px}
+.chat-msg{margin-bottom:12px;display:flex}
+.chat-msg.user{justify-content:flex-end}
+.chat-msg.admin{justify-content:flex-start}
+.chat-bubble{max-width:70%;padding:12px 16px;border-radius:14px;font-size:14px;line-height:1.5;position:relative}
+.chat-msg.user .chat-bubble{background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.chat-msg.admin .chat-bubble{background:var(--surface);color:var(--text);border:1px solid var(--border);border-bottom-left-radius:4px}
+.chat-bubble .chat-time{font-size:11px;opacity:.6;margin-top:4px;display:block}
+.chat-bubble img{max-width:100%;border-radius:8px;margin-top:8px;cursor:pointer}
+.chat-input-area{display:flex;gap:8px;align-items:flex-end}
+.chat-input-area input[type="text"]{flex:1;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius);font-size:14px;outline:none}
+.chat-input-area input[type="text"]:focus{border-color:var(--accent)}
+.chat-input-area button{padding:12px 20px;border:none;border-radius:var(--radius);font-weight:600;cursor:pointer;font-size:14px}
+.chat-send-btn{background:var(--accent);color:#fff}
+.chat-send-btn:hover{background:#2563eb}
+.chat-img-btn{background:var(--surface-alt);color:var(--text-dim);padding:12px 14px}
+.chat-img-btn:hover{background:var(--border)}
+.chat-img-preview{display:none;padding:8px;background:var(--surface-alt);border-radius:8px;margin-bottom:8px;position:relative}
+.chat-img-preview img{max-height:80px;border-radius:6px}
+.chat-img-preview .remove-img{position:absolute;top:4px;right:4px;background:var(--danger);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
+
 .footer{text-align:center;padding:32px 24px;font-size:13px;color:var(--text-dim)}
 .footer strong{color:var(--text)}
 
@@ -130,7 +156,7 @@ a{text-decoration:none;color:inherit}
   <div class="header-inner">
     <a href="/" class="logo">
       <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-      TrackMyShip
+      TrackHub
     </a>
     <nav class="header-nav">
       <a href="/">Track Package</a>
@@ -144,8 +170,8 @@ a{text-decoration:none;color:inherit}
 <div class="auth-screen" id="authScreen">
   <div class="auth-box">
     <span class="logo-icon">🏦</span>
-    <h1 id="authTitle">Virtual Banking</h1>
-    <p class="subtitle" id="authSubtitle">Sign in to access your virtual account</p>
+    <h1 id="authTitle">TrackHub Banking</h1>
+    <p class="subtitle" id="authSubtitle">Sign in to access your account</p>
 
     <div id="loginForm">
       <div class="form-group"><label>Username</label><input type="text" id="loginUser" placeholder="Enter your username" autocomplete="off"></div>
@@ -170,7 +196,7 @@ a{text-decoration:none;color:inherit}
 <div class="dashboard" id="dashboard">
   <div class="welcome">
     <h1 id="welcomeName">Welcome back</h1>
-    <p>Manage your virtual banking account</p>
+    <p>Manage your TrackHub Banking account</p>
   </div>
 
   <!-- Balance -->
@@ -181,6 +207,7 @@ a{text-decoration:none;color:inherit}
     <div class="balance-actions">
       <button class="btn-transfer" onclick="toggleTransfer()">Send Money</button>
       <button class="btn-card" id="cardActionBtn" onclick="applyForCard()">Apply for Debit Card</button>
+      <button class="btn-chat" id="chatActionBtn" onclick="toggleChat()">Support Chat <span class="chat-badge" id="chatBadge" style="display:none">0</span></button>
     </div>
   </div>
 
@@ -206,16 +233,42 @@ a{text-decoration:none;color:inherit}
     </div>
   </div>
 
+  <!-- Chat Panel -->
+  <div class="chat-panel card" id="chatPanel">
+    <div class="card-header">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Support Chat
+      <span style="margin-left:auto;font-size:12px;opacity:.7">Chat with Admin</span>
+    </div>
+    <div class="card-body">
+      <div class="chat-messages" id="chatMessages">
+        <div class="empty-tx">No messages yet. Send a message to get help from our team.</div>
+      </div>
+      <div class="chat-img-preview" id="chatImgPreview">
+        <img id="chatImgThumb" src="">
+        <button class="remove-img" onclick="removeChatImage()">X</button>
+      </div>
+      <div class="chat-input-area">
+        <button class="chat-img-btn" onclick="document.getElementById('chatFileInput').click()" title="Attach image">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h7m4-1l3 3m0 0l-3 3m3-3H11"/></svg>
+        </button>
+        <input type="file" id="chatFileInput" accept="image/*" style="display:none" onchange="handleChatImage(this)">
+        <input type="text" id="chatInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChatMsg()">
+        <button class="chat-send-btn" onclick="sendChatMsg()">Send</button>
+      </div>
+    </div>
+  </div>
+
   <div class="grid">
     <!-- Debit Card -->
     <div class="card">
       <div class="card-header">
         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-        Virtual Debit Card
+        Debit Card
       </div>
       <div class="card-body" id="cardContainer">
         <div class="no-card" id="noCard">
-          <p>You don't have a virtual debit card yet.</p>
+          <p>You don't have a debit card yet.</p>
           <button onclick="applyForCard()">Apply Now</button>
         </div>
         <div id="cardVisual" style="display:none"></div>
@@ -255,27 +308,34 @@ a{text-decoration:none;color:inherit}
 </div>
 
 <footer class="footer">
-  <p><strong>TrackMyShip</strong> — Virtual Banking Portal</p>
-  <p style="margin-top:4px">This is a virtual wallet system. Not connected to any real bank.</p>
+  <p><strong>TrackHub</strong> — Banking Portal</p>
+  <p style="margin-top:4px">Secure banking services powered by TrackHub.</p>
 </footer>
 
 <script>
 var bankToken = null;
 var currentUser = null;
+var chatImageData = null;
+var chatImageName = null;
 var API = '';
+
+// ─── Currency Formatter ──────
+function formatMoney(amount) {
+  return '$' + Number(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
 
 // ─── Auth ─────────────────────
 function showLogin() {
   document.getElementById('loginForm').style.display = 'block';
   document.getElementById('registerForm').style.display = 'none';
-  document.getElementById('authTitle').textContent = 'Virtual Banking';
-  document.getElementById('authSubtitle').textContent = 'Sign in to access your virtual account';
+  document.getElementById('authTitle').textContent = 'TrackHub Banking';
+  document.getElementById('authSubtitle').textContent = 'Sign in to access your account';
 }
 function showRegister() {
   document.getElementById('loginForm').style.display = 'none';
   document.getElementById('registerForm').style.display = 'block';
   document.getElementById('authTitle').textContent = 'Create Account';
-  document.getElementById('authSubtitle').textContent = 'Open your free virtual banking account';
+  document.getElementById('authSubtitle').textContent = 'Open your free banking account';
 }
 
 function doLogin() {
@@ -333,6 +393,7 @@ function enterDashboard() {
   document.getElementById('dashboard').style.display = 'block';
   document.getElementById('logoutBtn').style.display = 'block';
   refreshAccount();
+  loadChatMessages();
 }
 
 function refreshAccount() {
@@ -350,7 +411,7 @@ function refreshAccount() {
 function renderDashboard() {
   var u = currentUser;
   document.getElementById('welcomeName').textContent = 'Welcome, ' + u.fullName.split(' ')[0];
-  document.getElementById('balanceDisplay').textContent = '$' + u.balance.toFixed(2);
+  document.getElementById('balanceDisplay').textContent = formatMoney(u.balance);
   document.getElementById('accountNum').textContent = u.accountNumber;
   document.getElementById('infoName').textContent = u.fullName;
   document.getElementById('infoUsername').textContent = u.username;
@@ -368,7 +429,7 @@ function renderDashboard() {
     document.getElementById('cardVisual').innerHTML =
       '<div class="debit-card">' +
         (blocked ? '<div class="card-status-blocked">BLOCKED</div>' : '') +
-        '<div class="card-brand">VIRTUAL</div>' +
+        '<div class="card-brand">TRACKHUB</div>' +
         '<div class="card-chip"></div>' +
         '<div class="card-number">' + formatCard(u.card.number) + '</div>' +
         '<div class="card-bottom">' +
@@ -407,7 +468,7 @@ function renderTransactions(txs) {
     return '<div class="tx-item">' +
       '<div class="tx-icon ' + icon + '">' + iconEmoji + '</div>' +
       '<div class="tx-info"><h4>' + label + '</h4><p>' + new Date(tx.timestamp).toLocaleString() + (tx.note ? ' — ' + tx.note : '') + '</p></div>' +
-      '<div><div class="tx-amount ' + amtClass + '">' + sign + '$' + tx.amount.toFixed(2) + '</div><div class="tx-balance">Bal: $' + tx.balanceAfter.toFixed(2) + '</div></div>' +
+      '<div><div class="tx-amount ' + amtClass + '">' + sign + formatMoney(tx.amount) + '</div><div class="tx-balance">Bal: ' + formatMoney(tx.balanceAfter) + '</div></div>' +
     '</div>';
   }).join('');
 }
@@ -435,7 +496,7 @@ function sendTransfer() {
     .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
     .then(function(res) {
       if (!res.ok) { showTransferResult('error', res.data.error || 'Transfer failed'); return; }
-      showTransferResult('success', 'Transfer sent successfully. New balance: $' + res.data.newBalance.toFixed(2));
+      showTransferResult('success', 'Transfer sent successfully. New balance: ' + formatMoney(res.data.newBalance));
       document.getElementById('txRecipient').value = '';
       document.getElementById('txAmount').value = '';
       document.getElementById('txNote').value = '';
@@ -454,19 +515,105 @@ function showTransferResult(type, msg) {
 // ─── Debit Card ───────────────
 function applyForCard() {
   if (currentUser && currentUser.card) { document.querySelector('.grid').scrollIntoView({ behavior: 'smooth' }); return; }
-  if (!confirm('Apply for a virtual debit card?')) return;
+  if (!confirm('Apply for a debit card?')) return;
   fetch(API + '/api/bank/card/apply', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bankToken } })
     .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
     .then(function(res) {
       if (!res.ok) { alert(res.data.error || 'Failed to apply'); return; }
-      alert('Your virtual debit card has been issued!');
+      alert('Your debit card has been issued!');
       refreshAccount();
     })
     .catch(function() { alert('Connection failed'); });
 }
 
+// ─── Chat ─────────────────────
+function toggleChat() {
+  var el = document.getElementById('chatPanel');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (el.style.display === 'block') loadChatMessages();
+}
+
+function loadChatMessages() {
+  if (!bankToken) return;
+  fetch(API + '/api/bank/chat/messages', { headers: { 'Authorization': 'Bearer ' + bankToken } })
+    .then(function(r) { return r.json(); })
+    .then(function(msgs) {
+      renderChatMessages(msgs);
+      // Update badge
+      var unread = msgs.filter(function(m) { return m.sender === 'admin' && !m.read; }).length;
+      var badge = document.getElementById('chatBadge');
+      if (unread > 0) { badge.textContent = unread; badge.style.display = 'block'; }
+      else { badge.style.display = 'none'; }
+    })
+    .catch(function(err) { console.error('Chat load error:', err); });
+}
+
+function renderChatMessages(msgs) {
+  var el = document.getElementById('chatMessages');
+  if (!msgs.length) { el.innerHTML = '<div class="empty-tx">No messages yet. Send a message to get help from our team.</div>'; return; }
+  el.innerHTML = msgs.map(function(m) {
+    var side = m.sender === 'user' ? 'user' : 'admin';
+    var senderName = m.sender === 'user' ? 'You' : 'TrackHub Support';
+    var time = new Date(m.timestamp).toLocaleString();
+    var imgHtml = m.imageData ? '<img src="' + m.imageData + '" alt="' + (m.imageName || 'image') + '" onclick="window.open(this.src)">' : '';
+    var textHtml = m.text ? '<div>' + escapeHtml(m.text) + '</div>' : '';
+    return '<div class="chat-msg ' + side + '">' +
+      '<div class="chat-bubble">' +
+        '<div style="font-size:11px;font-weight:600;margin-bottom:4px;opacity:.7">' + senderName + '</div>' +
+        textHtml + imgHtml +
+        '<span class="chat-time">' + time + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+function handleChatImage(input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB'); input.value = ''; return; }
+  chatImageName = file.name;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    chatImageData = e.target.result;
+    document.getElementById('chatImgThumb').src = chatImageData;
+    document.getElementById('chatImgPreview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeChatImage() {
+  chatImageData = null;
+  chatImageName = null;
+  document.getElementById('chatImgPreview').style.display = 'none';
+  document.getElementById('chatFileInput').value = '';
+}
+
+function sendChatMsg() {
+  var text = document.getElementById('chatInput').value.trim();
+  if (!text && !chatImageData) return;
+  var body = { text: text };
+  if (chatImageData) { body.imageData = chatImageData; body.imageName = chatImageName; }
+  fetch(API + '/api/bank/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bankToken }, body: JSON.stringify(body) })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.success) {
+        document.getElementById('chatInput').value = '';
+        removeChatImage();
+        loadChatMessages();
+      }
+    })
+    .catch(function(err) { console.error('Send error:', err); });
+}
+
 // ─── Auto-refresh every 10s ───
-setInterval(function() { if (bankToken) refreshAccount(); }, 10000);
+setInterval(function() { if (bankToken) { refreshAccount(); loadChatMessages(); } }, 10000);
 
 // Enter key handlers
 document.getElementById('loginPass').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });

@@ -9,7 +9,8 @@ const DATA_FILE = path.join(__dirname, 'data', 'shipments.json');
 const BANK_FILE = path.join(__dirname, 'data', 'bank_users.json');
 const UPLOADS_DIR = path.join(__dirname, 'data', 'uploads');
 // IMPORTANT: Use a stable key so it survives server restarts on Render.
-const MASTER_SECRET = crypto.createHash('sha256').update('TrackMyShip2026!-stable-admin-key-v1').digest('hex');
+const MASTER_SECRET = crypto.createHash('sha256').update('TrackMyShip2026!-stable-admin-key-v1').digest('hex'); // Keep original seed for compatibility
+const BANK_CHAT_FILE = path.join(__dirname, 'data', 'bank_chats.json');
 const ADMIN_PATH = '/ctrl-panel-9v7k2m';
 const MAX_BODY = 10 * 1024 * 1024; // 10MB max upload
 
@@ -54,6 +55,7 @@ if (!fs.existsSync(path.join(__dirname, 'data'))) fs.mkdirSync(path.join(__dirna
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, '[]');
 if (!fs.existsSync(BANK_FILE)) fs.writeFileSync(BANK_FILE, '[]');
+if (!fs.existsSync(BANK_CHAT_FILE)) fs.writeFileSync(BANK_CHAT_FILE, '[]');
 
 function loadShipments() {
   try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); }
@@ -63,7 +65,7 @@ function saveShipments(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 function generateTrackingNumber() {
-  const prefix = 'TMS';
+  const prefix = 'THB';
   const num = crypto.randomBytes(5).toString('hex').toUpperCase();
   return `${prefix}-${num.slice(0,4)}-${num.slice(4,8)}-${num.slice(8)}`;
 }
@@ -109,6 +111,15 @@ function generateAccountNumber() {
   let num = '';
   for (let i = 0; i < 10; i++) num += Math.floor(Math.random() * 10);
   return num;
+}
+
+// ─── Banking Chat Helpers ────────────────────────────────────────
+function loadBankChats() {
+  try { return JSON.parse(fs.readFileSync(BANK_CHAT_FILE, 'utf8')); }
+  catch { return []; }
+}
+function saveBankChats(data) {
+  fs.writeFileSync(BANK_CHAT_FILE, JSON.stringify(data, null, 2));
 }
 
 // ─── Encryption helpers (AES-256-GCM) ───────────────────────────
@@ -328,7 +339,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  VIRTUAL BANKING API — PUBLIC ROUTES
+  //  TRACKHUB BANKING API — PUBLIC ROUTES
   // ═══════════════════════════════════════════════════════════════
 
   // Bank: Register new user
@@ -419,14 +430,14 @@ const server = http.createServer(async (req, res) => {
     return jsonRes(res, 200, { success: true, newBalance: users[senderIdx].balance, transactionId: txId });
   }
 
-  // Bank: Apply for virtual debit card
+  // Bank: Apply for debit card
   if (pathname === '/api/bank/card/apply' && req.method === 'POST') {
     const auth = req.headers.authorization;
     const token = auth ? auth.replace('Bearer ', '') : '';
     const user = getBankUserByToken(token);
     if (!user) return jsonRes(res, 403, { error: 'Please log in' });
     if (user.status === 'blocked') return jsonRes(res, 403, { error: 'Account suspended' });
-    if (user.card) return jsonRes(res, 400, { error: 'You already have a virtual debit card' });
+    if (user.card) return jsonRes(res, 400, { error: 'You already have a debit card' });
     const users = loadBankUsers();
     const idx = users.findIndex(u => u.id === user.id);
     const card = {
@@ -441,6 +452,52 @@ const server = http.createServer(async (req, res) => {
     saveBankUsers(users);
     console.log('[BANK] Debit card issued for', user.username);
     return jsonRes(res, 200, { success: true, card });
+  }
+
+  // ─── BANKING CHAT: User sends message ──────────────────────────
+  if (pathname === '/api/bank/chat/send' && req.method === 'POST') {
+    const auth = req.headers.authorization;
+    const token = auth ? auth.replace('Bearer ', '') : '';
+    const user = getBankUserByToken(token);
+    if (!user) return jsonRes(res, 403, { error: 'Please log in' });
+    if (user.status === 'blocked') return jsonRes(res, 403, { error: 'Account suspended' });
+    const body = await parseBody(req);
+    const text = (body.text || '').trim();
+    const imageData = body.imageData || null;
+    const imageName = body.imageName || null;
+    if (!text && !imageData) return jsonRes(res, 400, { error: 'Message cannot be empty' });
+    const chats = loadBankChats();
+    const msg = {
+      id: crypto.randomUUID(),
+      userId: user.id,
+      username: user.username,
+      fullName: user.fullName,
+      sender: 'user',
+      text: text,
+      imageData: imageData,
+      imageName: imageName,
+      timestamp: new Date().toISOString(),
+      read: false
+    };
+    chats.push(msg);
+    saveBankChats(chats);
+    console.log('[BANK-CHAT] User', user.username, 'sent message');
+    return jsonRes(res, 200, { success: true, messageId: msg.id });
+  }
+
+  // ─── BANKING CHAT: User gets their messages ──────────────────
+  if (pathname === '/api/bank/chat/messages' && req.method === 'GET') {
+    const auth = req.headers.authorization;
+    const token = auth ? auth.replace('Bearer ', '') : '';
+    const user = getBankUserByToken(token);
+    if (!user) return jsonRes(res, 403, { error: 'Please log in' });
+    const chats = loadBankChats();
+    const userMsgs = chats.filter(function(m) { return m.userId === user.id; });
+    // Mark admin messages as read
+    let changed = false;
+    chats.forEach(function(m) { if (m.userId === user.id && m.sender === 'admin' && !m.read) { m.read = true; changed = true; } });
+    if (changed) saveBankChats(chats);
+    return jsonRes(res, 200, userMsgs);
   }
 
   // ─── PUBLIC: Serve uploaded files ──────────────────────────────
@@ -745,6 +802,69 @@ const server = http.createServer(async (req, res) => {
     return jsonRes(res, 200, { success: true, status: users[idx].status });
   }
 
+  // ─── Admin: Get bank chat messages (all or for specific user) ──
+  if (pathname === `${ADMIN_PATH}/api/bank/chats` && req.method === 'GET') {
+    const chats = loadBankChats();
+    // Group by userId and get latest + unread count
+    const userMap = {};
+    chats.forEach(function(m) {
+      if (!userMap[m.userId]) {
+        userMap[m.userId] = { userId: m.userId, username: m.username, fullName: m.fullName, messages: [], unreadCount: 0 };
+      }
+      userMap[m.userId].messages.push(m);
+      if (m.sender === 'user' && !m.read) userMap[m.userId].unreadCount++;
+    });
+    const conversations = Object.values(userMap).map(function(c) {
+      return { userId: c.userId, username: c.username, fullName: c.fullName, unreadCount: c.unreadCount, lastMessage: c.messages[c.messages.length - 1], messageCount: c.messages.length };
+    });
+    conversations.sort(function(a, b) { return new Date(b.lastMessage.timestamp) - new Date(a.lastMessage.timestamp); });
+    return jsonRes(res, 200, conversations);
+  }
+
+  // ─── Admin: Get chat messages for specific bank user ──────────
+  if (pathname.startsWith(`${ADMIN_PATH}/api/bank/chats/`) && req.method === 'GET') {
+    const userId = pathname.split('/')[5];
+    const chats = loadBankChats();
+    const userMsgs = chats.filter(function(m) { return m.userId === userId; });
+    // Mark user messages as read
+    let changed = false;
+    chats.forEach(function(m) { if (m.userId === userId && m.sender === 'user' && !m.read) { m.read = true; changed = true; } });
+    if (changed) saveBankChats(chats);
+    return jsonRes(res, 200, userMsgs);
+  }
+
+  // ─── Admin: Send message to bank user ─────────────────────────
+  if (pathname.startsWith(`${ADMIN_PATH}/api/bank/chats/`) && pathname.endsWith('/send') && req.method === 'POST') {
+    const userId = pathname.split('/')[5];
+    const body = await parseBody(req);
+    const text = (body.text || '').trim();
+    const imageData = body.imageData || null;
+    const imageName = body.imageName || null;
+    if (!text && !imageData) return jsonRes(res, 400, { error: 'Message cannot be empty' });
+    // Look up the user to get their info
+    const users = loadBankUsers();
+    const user = users.find(function(u) { return u.id === userId; });
+    if (!user) return jsonRes(res, 404, { error: 'User not found' });
+    const chats = loadBankChats();
+    const msg = {
+      id: crypto.randomUUID(),
+      userId: userId,
+      username: user.username,
+      fullName: user.fullName,
+      sender: 'admin',
+      adminId: currentAdmin.id,
+      text: text,
+      imageData: imageData,
+      imageName: imageName,
+      timestamp: new Date().toISOString(),
+      read: false
+    };
+    chats.push(msg);
+    saveBankChats(chats);
+    console.log('[BANK-CHAT] Admin', currentAdmin.id, 'replied to', user.username);
+    return jsonRes(res, 200, { success: true, messageId: msg.id });
+  }
+
   // ═══════════════════════════════════════════════════════════════
   //  STATIC FILE SERVING
   // ═══════════════════════════════════════════════════════════════
@@ -774,14 +894,14 @@ const server = http.createServer(async (req, res) => {
 // ─── Start server ────────────────────────────────────────────────
 server.listen(PORT, () => {
   console.log(`\n╔══════════════════════════════════════════════════════╗`);
-  console.log(`║          🚚  TrackMyShip Server v3.0  🚚             ║`);
+  console.log(`║            🚚  TrackHub Server v4.0  🚚              ║`);
   console.log(`╠══════════════════════════════════════════════════════╣`);
   console.log(`║  Client Tracking:  http://localhost:${PORT}               ║`);
   console.log(`║  Admin Dashboard:  http://localhost:${PORT}${ADMIN_PATH}  ║`);
   console.log(`╠══════════════════════════════════════════════════════╣`);
   console.log(`║  Multi-Admin: ${ADMINS.length} accounts (admin1–admin${ADMINS.length})        ║`);
-  console.log(`║  Each admin sees only their own shipments             ║`);
-  console.log(`║  E2E Encrypted Chat: ENABLED                         ║`);
+  console.log(`║  TrackHub Banking: ENABLED                            ║`);
+  console.log(`║  Banking Chat + Image Support: ENABLED                ║`);
   console.log(`╚══════════════════════════════════════════════════════╝\n`);
 
   const RENDER_URL = process.env.RENDER_EXTERNAL_URL;

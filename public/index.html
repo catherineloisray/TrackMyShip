@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrackMyShip — Global Delivery Tracking</title>
+<title>TrackHub — Global Delivery Tracking</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -163,7 +163,7 @@ a{text-decoration:none;color:inherit}
   <div class="header-inner">
     <div class="logo">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-      TrackMyShip
+      TrackHub
     </div>
     <nav class="header-nav">
       <a href="/">Home</a>
@@ -179,7 +179,7 @@ a{text-decoration:none;color:inherit}
   <p>Real-time GPS tracking for your deliveries — from pickup to your doorstep</p>
   <div class="search-container">
     <div class="search-box">
-      <input type="text" id="trackInput" placeholder="Enter your tracking number (e.g. TMS-A1B2-C3D4-E5)" autocomplete="off">
+      <input type="text" id="trackInput" placeholder="Enter your tracking number (e.g. THB-A1B2-C3D4-E5)" autocomplete="off">
       <button onclick="trackShipment()">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         Track
@@ -314,7 +314,7 @@ a{text-decoration:none;color:inherit}
   <div class="chat-panel" id="chatPanel">
     <div class="chat-panel-header">
       <div>
-        <h3>TrackMyShip Support</h3>
+        <h3>TrackHub Support</h3>
         <div class="e2e">
           <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
           End-to-End Encrypted
@@ -344,8 +344,8 @@ a{text-decoration:none;color:inherit}
 
 <!-- ═══ FOOTER ═══ -->
 <footer class="footer">
-  <p><strong>TrackMyShip</strong> — Free Global Delivery Tracking</p>
-  <p style="margin-top:4px">&copy; 2026 TrackMyShip. All shipments tracked end-to-end. <span style="opacity:.4" id="appVer"></span></p>
+  <p><strong>TrackHub</strong> — Free Global Delivery Tracking</p>
+  <p style="margin-top:4px">&copy; 2026 TrackHub. All shipments tracked end-to-end. <span style="opacity:.4" id="appVer"></span></p>
 </footer>
 
 <script>
@@ -359,8 +359,8 @@ let inlinePendingFile = null;
 let currentTN = null;
 
 const API = '';
-const APP_VERSION = 'v3.0';
-console.log('[TrackMyShip Client ' + APP_VERSION + '] loaded at ' + new Date().toISOString());
+const APP_VERSION = 'v4.0';
+console.log('[TrackHub Client ' + APP_VERSION + '] loaded at ' + new Date().toISOString());
 document.addEventListener('DOMContentLoaded', function() { var v = document.getElementById('appVer'); if (v) v.textContent = APP_VERSION; });
 
 // ─── Track ─────────────────────
@@ -589,12 +589,12 @@ function loadAllMessages() {
       return r.json();
     })
     .then(function(messages) {
-      console.log('[TrackMyShip] Loaded', messages.length, 'messages for', currentTN);
+      console.log('[TrackHub] Loaded', messages.length, 'messages for', currentTN);
       renderInlineMessages(messages);
       renderFloatingChat(messages);
     })
     .catch(function(err) {
-      console.error('[TrackMyShip] Failed to load messages:', err);
+      console.error('[TrackHub] Failed to load messages:', err);
     });
 }
 
@@ -680,7 +680,7 @@ function renderInlineMessages(messages) {
     }
     var bgStyle = isClient ? 'background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px' : 'background:#e2e8f0;color:var(--text);align-self:flex-start;border-bottom-left-radius:4px';
     return '<div style="max-width:80%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.5;word-wrap:break-word;' + bgStyle + '">' +
-      '<div style="font-size:11px;font-weight:600;margin-bottom:2px;opacity:.7">' + (isClient ? 'You' : 'TrackMyShip') + '</div>' +
+      '<div style="font-size:11px;font-weight:600;margin-bottom:2px;opacity:.7">' + (isClient ? 'You' : 'TrackHub') + '</div>' +
       (m.text || '') + fileHtml +
       '<span style="font-size:10px;opacity:.5;margin-top:4px;display:block">' + new Date(m.timestamp).toLocaleString() + '</span></div>';
   }).join('');

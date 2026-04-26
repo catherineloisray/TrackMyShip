@@ -1,0 +1,52 @@
+[
+  {
+    "id": "d3f7cbb6-2dc7-4e2a-8a84-e759cf76a809",
+    "userId": "3fcf4533-2899-4ff5-8eed-1af7c474eeb5",
+    "username": "alice",
+    "fullName": "Alice Johnson",
+    "sender": "user",
+    "text": "Hello admin, I need help with my account",
+    "imageData": null,
+    "imageName": null,
+    "timestamp": "2026-04-26T13:47:48.817Z",
+    "read": true
+  },
+  {
+    "id": "f7296bfb-7775-4517-ba37-27118af65b4c",
+    "userId": "3fcf4533-2899-4ff5-8eed-1af7c474eeb5",
+    "username": "alice",
+    "fullName": "Alice Johnson",
+    "sender": "user",
+    "text": "Here is my screenshot",
+    "imageData": "data:image/png;base64,fakedata",
+    "imageName": "screenshot.png",
+    "timestamp": "2026-04-26T13:47:48.819Z",
+    "read": true
+  },
+  {
+    "id": "c16ae5b7-15f5-44dd-838e-e0ec1430a3fc",
+    "userId": "3fcf4533-2899-4ff5-8eed-1af7c474eeb5",
+    "username": "alice",
+    "fullName": "Alice Johnson",
+    "sender": "admin",
+    "adminId": "admin1",
+    "text": "Hi Alice, how can I help you?",
+    "imageData": null,
+    "imageName": null,
+    "timestamp": "2026-04-26T13:47:48.827Z",
+    "read": true
+  },
+  {
+    "id": "b8406bca-b32b-4209-b827-cbcf9a3bf2bc",
+    "userId": "3fcf4533-2899-4ff5-8eed-1af7c474eeb5",
+    "username": "alice",
+    "fullName": "Alice Johnson",
+    "sender": "admin",
+    "adminId": "admin1",
+    "text": "",
+    "imageData": "data:image/jpeg;base64,fakeadminimg",
+    "imageName": "help.jpg",
+    "timestamp": "2026-04-26T13:47:48.830Z",
+    "read": true
+  }
+]

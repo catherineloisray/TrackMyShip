@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrackMyShip — Admin Dashboard</title>
+<title>TrackHub — Admin Dashboard</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -107,7 +107,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
 <div class="login-screen" id="loginScreen">
   <div class="login-box">
     <span class="logo">📦</span>
-    <h1>TrackMyShip Admin</h1>
+    <h1>TrackHub Admin</h1>
     <p>Secure admin portal — authorized personnel only</p>
     <div class="form-group"><label>Username</label><input type="text" id="loginUser" placeholder="Enter username" autocomplete="off"></div>
     <div class="form-group"><label>Password</label><input type="password" id="loginPass" placeholder="Enter password"></div>
@@ -118,7 +118,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
 
 <div class="dashboard" id="dashboard">
   <div class="sidebar">
-    <div class="brand"><h2>📦 TrackMyShip</h2><span>Logged in as <strong id="adminNameDisplay">—</strong></span></div>
+    <div class="brand"><h2>📦 TrackHub</h2><span>Logged in as <strong id="adminNameDisplay">—</strong></span></div>
     <nav>
       <a href="#" class="active" onclick="showSection('overview')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
@@ -136,6 +136,11 @@ tr:hover td{background:rgba(255,255,255,.03)}
       <a href="#" onclick="showSection('banking')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
         Banking
+      </a>
+      <a href="#" onclick="showSection('bankChats')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        Bank Chats
+        <span class="nav-badge hidden" id="bankChatUnread">0</span>
       </a>
       <a href="#" onclick="showSection('gps')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -248,7 +253,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
         <div class="stat-card red"><h3 id="bankStatBlocked">0</h3><p>Blocked</p></div>
       </div>
       <div class="table-wrap">
-        <div class="table-header"><h2>Virtual Bank Accounts</h2></div>
+        <div class="table-header"><h2>Bank Accounts</h2></div>
         <table>
           <thead><tr><th>User</th><th>Account #</th><th>Balance</th><th>Card</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="bankUsersTable"></tbody>
@@ -266,6 +271,32 @@ tr:hover td{background:rgba(255,255,255,.03)}
         <div class="modal-actions">
           <button class="btn btn-danger btn-sm" onclick="closeFundModal()">Cancel</button>
           <button class="btn btn-success btn-sm" id="fundSubmitBtn" onclick="submitFund()">Fund Account</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BANK CHATS -->
+    <div id="sectionBankChats" class="hidden">
+      <div id="bankChatList" class="chat-list">
+        <p style="color:var(--text-dim);text-align:center;padding:40px">No bank user conversations yet.</p>
+      </div>
+      <div id="bankChatView" class="hidden" style="margin-top:24px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <button class="btn btn-sm" style="background:var(--surface2)" onclick="closeBankChatView()">Back</button>
+          <h2 id="bankChatUserName">Chat with —</h2>
+        </div>
+        <div id="bankChatMessages" style="height:400px;overflow-y:auto;background:var(--surface);border-radius:var(--radius);padding:16px;margin-bottom:12px"></div>
+        <div id="bankChatImgPreview" style="display:none;padding:8px;background:var(--surface2);border-radius:8px;margin-bottom:8px;position:relative">
+          <img id="bankChatImgThumb" src="" style="max-height:80px;border-radius:6px">
+          <button onclick="removeBankChatImage()" style="position:absolute;top:4px;right:4px;background:var(--danger);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:12px">X</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <button class="btn btn-sm" style="background:var(--surface2);padding:10px" onclick="document.getElementById('bankChatFileInput').click()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h7m4-1l3 3m0 0l-3 3m3-3H11"/></svg>
+          </button>
+          <input type="file" id="bankChatFileInput" accept="image/*" style="display:none" onchange="handleBankChatImage(this)">
+          <input type="text" id="bankChatInput" placeholder="Reply to user..." style="flex:1;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px" onkeydown="if(event.key==='Enter')sendBankChatReply()">
+          <button class="btn btn-primary btn-sm" onclick="sendBankChatReply()">Send</button>
         </div>
       </div>
     </div>
@@ -317,8 +348,12 @@ let formMap = null, originMarker = null, destMarker = null, clickMode = 'origin'
 let currentChatShipment = null, pendingFile = null;
 let loggedInAdmin = null;
 const API = window.location.pathname.replace(/\/+$/, '');
-const APP_VERSION = 'v3.0';
-console.log('[TrackMyShip Admin ' + APP_VERSION + '] loaded at ' + new Date().toISOString());
+const APP_VERSION = 'v4.0';
+
+function formatMoney(amount) {
+  return '$' + Number(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+console.log('[TrackHub Admin ' + APP_VERSION + '] loaded at ' + new Date().toISOString());
 
 // ─── Auth ──────────────────────
 async function doLogin() {
@@ -497,17 +532,18 @@ function handleFileSelect(e) {
 function showSection(name) {
   document.querySelectorAll('[id^="section"]').forEach(el=>el.classList.add('hidden'));
   document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
-  const titles={overview:'Overview',newShipment:'New Shipment',messages:'Messages',banking:'Banking',gps:'Live GPS'};
+  const titles={overview:'Overview',newShipment:'New Shipment',messages:'Messages',banking:'Banking',bankChats:'Bank Chats',gps:'Live GPS'};
   document.getElementById('pageTitle').textContent=titles[name]||name;
   const section=document.getElementById('section'+name.charAt(0).toUpperCase()+name.slice(1));
   if(section)section.classList.remove('hidden');
   const links=document.querySelectorAll('.sidebar nav a');
-  const idx={overview:0,newShipment:1,messages:2,banking:3,gps:4};
+  const idx={overview:0,newShipment:1,messages:2,banking:3,bankChats:4,gps:5};
   if(idx[name]!==undefined&&links[idx[name]])links[idx[name]].classList.add('active');
   if(name==='gps'&&!gpsMap)initGPSMap();
   if(name==='newShipment')setTimeout(()=>{if(formMap)formMap.invalidateSize();else initFormMap();},200);
   if(name==='messages'){document.getElementById('chatConversation').classList.add('hidden');document.getElementById('chatListView').classList.remove('hidden');renderChatList();}
   if(name==='banking') loadBankUsers();
+  if(name==='bankChats') loadBankChatList();
 }
 
 // ─── Maps ──────────────────────
@@ -545,7 +581,7 @@ function renderBankTable() {
     return `<tr>
       <td><strong>${u.fullName}</strong><br><span style="font-size:12px;color:var(--text-dim)">${u.username}</span></td>
       <td style="font-family:monospace;font-size:13px">${u.accountNumber}</td>
-      <td style="font-weight:700;font-size:16px;color:var(--success)">$${u.balance.toFixed(2)}</td>
+      <td style="font-weight:700;font-size:16px;color:var(--success)">${formatMoney(u.balance)}</td>
       <td>${cardStatus}</td>
       <td>${acctStatus}</td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
@@ -601,6 +637,127 @@ async function toggleCard(userId, isActive) {
   } catch(err) { alert('Failed: ' + err.message); }
 }
 
+// ─── Bank Chat Management ─────
+var bankChatUserId = null;
+var bankChatImageData = null;
+var bankChatImageName = null;
+
+async function loadBankChatList() {
+  try {
+    const conversations = await apiFetch('/api/bank/chats');
+    const el = document.getElementById('bankChatList');
+    if (!conversations.length) {
+      el.innerHTML = '<p style="color:var(--text-dim);text-align:center;padding:40px">No bank user conversations yet.</p>';
+      updateBankChatBadge(0);
+      return;
+    }
+    let totalUnread = 0;
+    el.innerHTML = conversations.map(function(c) {
+      totalUnread += c.unreadCount;
+      const time = new Date(c.lastMessage.timestamp).toLocaleString();
+      const preview = c.lastMessage.text ? c.lastMessage.text.substring(0, 60) : '[Image]';
+      const badge = c.unreadCount > 0 ? '<span style="background:var(--danger);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700">' + c.unreadCount + '</span>' : '';
+      return '<div class="chat-card" onclick="openBankChat(\'' + c.userId + '\',\'' + escapeAttr(c.fullName) + '\')" style="cursor:pointer">' +
+        '<div><div style="font-weight:600;margin-bottom:4px">' + escapeHtml(c.fullName) + ' <span style="color:var(--text-dim);font-weight:400;font-size:12px">@' + c.username + '</span></div>' +
+        '<div style="color:var(--text-dim);font-size:13px">' + escapeHtml(preview) + '</div>' +
+        '<div style="color:var(--text-dim);font-size:11px;margin-top:4px">' + time + '</div></div>' +
+        '<div>' + badge + '</div></div>';
+    }).join('');
+    updateBankChatBadge(totalUnread);
+  } catch(err) { console.error('Bank chat list error:', err); }
+}
+
+function updateBankChatBadge(count) {
+  const badge = document.getElementById('bankChatUnread');
+  if (count > 0) { badge.textContent = count; badge.classList.remove('hidden'); }
+  else { badge.classList.add('hidden'); }
+}
+
+async function openBankChat(userId, fullName) {
+  bankChatUserId = userId;
+  document.getElementById('bankChatUserName').textContent = 'Chat with ' + fullName;
+  document.getElementById('bankChatList').classList.add('hidden');
+  document.getElementById('bankChatView').classList.remove('hidden');
+  await loadBankChatMessages(userId);
+}
+
+function closeBankChatView() {
+  document.getElementById('bankChatView').classList.add('hidden');
+  document.getElementById('bankChatList').classList.remove('hidden');
+  bankChatUserId = null;
+  loadBankChatList();
+}
+
+async function loadBankChatMessages(userId) {
+  try {
+    const msgs = await apiFetch('/api/bank/chats/' + userId);
+    const el = document.getElementById('bankChatMessages');
+    if (!msgs.length) { el.innerHTML = '<p style="color:var(--text-dim);text-align:center;padding:40px">No messages yet.</p>'; return; }
+    el.innerHTML = msgs.map(function(m) {
+      const isAdmin = m.sender === 'admin';
+      const side = isAdmin ? 'right' : 'left';
+      const bg = isAdmin ? 'var(--accent)' : 'var(--surface2)';
+      const color = isAdmin ? '#fff' : 'var(--text)';
+      const senderName = isAdmin ? 'You' : m.fullName;
+      const time = new Date(m.timestamp).toLocaleString();
+      const imgHtml = m.imageData ? '<img src="' + m.imageData + '" style="max-width:100%;border-radius:8px;margin-top:8px;cursor:pointer" onclick="window.open(this.src)">' : '';
+      const textHtml = m.text ? '<div>' + escapeHtml(m.text) + '</div>' : '';
+      return '<div style="display:flex;justify-content:' + (side === 'right' ? 'flex-end' : 'flex-start') + ';margin-bottom:12px">' +
+        '<div style="max-width:70%;padding:12px 16px;border-radius:14px;background:' + bg + ';color:' + color + '">' +
+        '<div style="font-size:11px;font-weight:600;margin-bottom:4px;opacity:.7">' + senderName + '</div>' +
+        textHtml + imgHtml +
+        '<div style="font-size:11px;opacity:.5;margin-top:4px">' + time + '</div>' +
+        '</div></div>';
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+  } catch(err) { console.error('Bank chat messages error:', err); }
+}
+
+function handleBankChatImage(input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB'); input.value = ''; return; }
+  bankChatImageName = file.name;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    bankChatImageData = e.target.result;
+    document.getElementById('bankChatImgThumb').src = bankChatImageData;
+    document.getElementById('bankChatImgPreview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeBankChatImage() {
+  bankChatImageData = null;
+  bankChatImageName = null;
+  document.getElementById('bankChatImgPreview').style.display = 'none';
+  document.getElementById('bankChatFileInput').value = '';
+}
+
+async function sendBankChatReply() {
+  if (!bankChatUserId) return;
+  var text = document.getElementById('bankChatInput').value.trim();
+  if (!text && !bankChatImageData) return;
+  try {
+    var body = { text: text };
+    if (bankChatImageData) { body.imageData = bankChatImageData; body.imageName = bankChatImageName; }
+    await apiFetch('/api/bank/chats/' + bankChatUserId + '/send', { method: 'POST', body: JSON.stringify(body) });
+    document.getElementById('bankChatInput').value = '';
+    removeBankChatImage();
+    await loadBankChatMessages(bankChatUserId);
+  } catch(err) { console.error('Send bank chat error:', err); alert('Failed to send message'); }
+}
+
+function escapeHtml(str) {
+  var d = document.createElement('div');
+  d.appendChild(document.createTextNode(str));
+  return d.innerHTML;
+}
+
+function escapeAttr(str) {
+  return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
 // Auto-refresh: 3 seconds when in chat, 8 seconds otherwise
 setInterval(function(){
   if (!authToken) return;
@@ -610,7 +767,10 @@ setInterval(function(){
       if (currentChatShipment) renderMessages(currentChatShipment.messages || []);
     }
   }).catch(function(err){ console.error('Poll error:', err); });
-}, 3000);
+  // Also refresh bank chats
+  loadBankChatList();
+  if (bankChatUserId) loadBankChatMessages(bankChatUserId);
+}, 5000);
 </script>
 </body>
 </html>
