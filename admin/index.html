@@ -133,6 +133,10 @@ tr:hover td{background:rgba(255,255,255,.03)}
         Messages
         <span class="nav-badge hidden" id="totalUnread">0</span>
       </a>
+      <a href="#" onclick="showSection('banking')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+        Banking
+      </a>
       <a href="#" onclick="showSection('gps')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         Live GPS
@@ -232,6 +236,36 @@ tr:hover td{background:rgba(255,255,255,.03)}
             <input type="text" id="chatMsgInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendAdminMsg()">
             <button onclick="sendAdminMsg()">Send</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BANKING -->
+    <div id="sectionBanking" class="hidden">
+      <div class="stats" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-card"><h3 id="bankStatUsers">0</h3><p>Total Users</p></div>
+        <div class="stat-card green"><h3 id="bankStatActive">0</h3><p>Active</p></div>
+        <div class="stat-card red"><h3 id="bankStatBlocked">0</h3><p>Blocked</p></div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><h2>Virtual Bank Accounts</h2></div>
+        <table>
+          <thead><tr><th>User</th><th>Account #</th><th>Balance</th><th>Card</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="bankUsersTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- BANK FUND MODAL -->
+    <div class="modal-overlay" id="fundModal">
+      <div class="modal" style="width:440px">
+        <h2 id="fundModalTitle">Fund Account</h2>
+        <input type="hidden" id="fundUserId">
+        <div class="form-group"><label>Amount ($)</label><input type="number" id="fundAmount" placeholder="0.00" step="0.01" min="0.01"></div>
+        <div class="form-group"><label>Note</label><input type="text" id="fundNote" placeholder="Reason for funding"></div>
+        <div class="modal-actions">
+          <button class="btn btn-danger btn-sm" onclick="closeFundModal()">Cancel</button>
+          <button class="btn btn-success btn-sm" id="fundSubmitBtn" onclick="submitFund()">Fund Account</button>
         </div>
       </div>
     </div>
@@ -463,16 +497,17 @@ function handleFileSelect(e) {
 function showSection(name) {
   document.querySelectorAll('[id^="section"]').forEach(el=>el.classList.add('hidden'));
   document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
-  const titles={overview:'Overview',newShipment:'New Shipment',messages:'Messages',gps:'Live GPS'};
+  const titles={overview:'Overview',newShipment:'New Shipment',messages:'Messages',banking:'Banking',gps:'Live GPS'};
   document.getElementById('pageTitle').textContent=titles[name]||name;
   const section=document.getElementById('section'+name.charAt(0).toUpperCase()+name.slice(1));
   if(section)section.classList.remove('hidden');
   const links=document.querySelectorAll('.sidebar nav a');
-  const idx={overview:0,newShipment:1,messages:2,gps:3};
+  const idx={overview:0,newShipment:1,messages:2,banking:3,gps:4};
   if(idx[name]!==undefined&&links[idx[name]])links[idx[name]].classList.add('active');
   if(name==='gps'&&!gpsMap)initGPSMap();
   if(name==='newShipment')setTimeout(()=>{if(formMap)formMap.invalidateSize();else initFormMap();},200);
   if(name==='messages'){document.getElementById('chatConversation').classList.add('hidden');document.getElementById('chatListView').classList.remove('hidden');renderChatList();}
+  if(name==='banking') loadBankUsers();
 }
 
 // ─── Maps ──────────────────────
@@ -484,6 +519,87 @@ function initGPSMap(){gpsMap=L.map('gpsMapContainer').setView([20,0],3);L.tileLa
 function startGPS(){if(!navigator.geolocation){alert('Geolocation not supported');return;}document.getElementById('gpsStartBtn').classList.add('hidden');document.getElementById('gpsStopBtn').classList.remove('hidden');document.getElementById('gpsDot').classList.add('active');document.getElementById('gpsLabel').textContent='GPS Active — Broadcasting';gpsWatchId=navigator.geolocation.watchPosition(async(pos)=>{const{latitude:lat,longitude:lng}=pos.coords;document.getElementById('gpsLat').textContent=lat.toFixed(6);document.getElementById('gpsLng').textContent=lng.toFixed(6);document.getElementById('gpsTime').textContent=new Date().toLocaleTimeString();if(gpsMap){if(!gpsMarker){gpsMarker=L.marker([lat,lng],{icon:blueIcon()}).addTo(gpsMap);gpsMap.setView([lat,lng],14);}else gpsMarker.setLatLng([lat,lng]);}try{await apiFetch('/api/broadcast-location',{method:'PUT',body:JSON.stringify({lat,lng})});}catch{}},err=>console.error('GPS:',err),{enableHighAccuracy:true,maximumAge:5000,timeout:10000});}
 
 function stopGPS(){if(gpsWatchId!==null){navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;}document.getElementById('gpsStartBtn').classList.remove('hidden');document.getElementById('gpsStopBtn').classList.add('hidden');document.getElementById('gpsDot').classList.remove('active');document.getElementById('gpsLabel').textContent='GPS Inactive';}
+
+// ─── Banking Management ───────
+let bankUsers = [];
+
+async function loadBankUsers() {
+  try {
+    bankUsers = await apiFetch('/api/bank/users');
+    renderBankStats();
+    renderBankTable();
+  } catch(err) { console.error('Load bank users error:', err); }
+}
+
+function renderBankStats() {
+  document.getElementById('bankStatUsers').textContent = bankUsers.length;
+  document.getElementById('bankStatActive').textContent = bankUsers.filter(u => u.status === 'active').length;
+  document.getElementById('bankStatBlocked').textContent = bankUsers.filter(u => u.status === 'blocked').length;
+}
+
+function renderBankTable() {
+  document.getElementById('bankUsersTable').innerHTML = bankUsers.map(u => {
+    const cardStatus = u.card ? (u.card.status === 'active' ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-red">Blocked</span>') : '<span class="badge badge-blue">None</span>';
+    const acctStatus = u.status === 'active' ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-red">Blocked</span>';
+    const cardBtn = u.card ? `<button class="btn btn-sm" style="background:${u.card.status==='active'?'var(--danger)':'var(--success)'};color:#fff;padding:4px 8px;font-size:11px" onclick="toggleCard('${u.id}',${u.card.status==='active'})">${u.card.status==='active'?'Block Card':'Unblock Card'}</button>` : '';
+    return `<tr>
+      <td><strong>${u.fullName}</strong><br><span style="font-size:12px;color:var(--text-dim)">${u.username}</span></td>
+      <td style="font-family:monospace;font-size:13px">${u.accountNumber}</td>
+      <td style="font-weight:700;font-size:16px;color:var(--success)">$${u.balance.toFixed(2)}</td>
+      <td>${cardStatus}</td>
+      <td>${acctStatus}</td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-success btn-sm" style="padding:4px 8px;font-size:11px" onclick="openFundModal('${u.id}','${u.fullName}','fund')">Fund</button>
+        <button class="btn btn-warning btn-sm" style="padding:4px 8px;font-size:11px" onclick="openFundModal('${u.id}','${u.fullName}','debit')">Debit</button>
+        <button class="btn btn-sm" style="background:${u.status==='active'?'var(--danger)':'var(--success)'};color:#fff;padding:4px 8px;font-size:11px" onclick="toggleBlock('${u.id}',${u.status==='active'})">${u.status==='active'?'Block':'Unblock'}</button>
+        ${cardBtn}
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-dim)">No bank users yet</td></tr>';
+}
+
+let fundMode = 'fund';
+function openFundModal(userId, name, mode) {
+  fundMode = mode;
+  document.getElementById('fundUserId').value = userId;
+  document.getElementById('fundModalTitle').textContent = mode === 'fund' ? 'Fund ' + name : 'Debit from ' + name;
+  document.getElementById('fundSubmitBtn').textContent = mode === 'fund' ? 'Fund Account' : 'Debit Account';
+  document.getElementById('fundSubmitBtn').className = mode === 'fund' ? 'btn btn-success btn-sm' : 'btn btn-warning btn-sm';
+  document.getElementById('fundAmount').value = '';
+  document.getElementById('fundNote').value = '';
+  document.getElementById('fundModal').classList.add('show');
+}
+function closeFundModal() { document.getElementById('fundModal').classList.remove('show'); }
+
+async function submitFund() {
+  const userId = document.getElementById('fundUserId').value;
+  const amount = document.getElementById('fundAmount').value;
+  const note = document.getElementById('fundNote').value;
+  if (!amount || parseFloat(amount) <= 0) { alert('Enter a valid amount'); return; }
+  try {
+    const endpoint = fundMode === 'fund' ? `/api/bank/users/${userId}/fund` : `/api/bank/users/${userId}/debit`;
+    await apiFetch(endpoint, { method: 'POST', body: JSON.stringify({ amount: parseFloat(amount), note }) });
+    closeFundModal();
+    loadBankUsers();
+    alert((fundMode === 'fund' ? 'Funded' : 'Debited') + ' $' + parseFloat(amount).toFixed(2) + ' successfully');
+  } catch(err) { alert('Failed: ' + err.message); }
+}
+
+async function toggleBlock(userId, isActive) {
+  if (!confirm(isActive ? 'Block this user account?' : 'Unblock this user account?')) return;
+  try {
+    await apiFetch(`/api/bank/users/${userId}/block`, { method: 'PUT', body: JSON.stringify({ blocked: isActive }) });
+    loadBankUsers();
+  } catch(err) { alert('Failed: ' + err.message); }
+}
+
+async function toggleCard(userId, isActive) {
+  if (!confirm(isActive ? 'Block this debit card?' : 'Unblock this debit card?')) return;
+  try {
+    await apiFetch(`/api/bank/users/${userId}/card/block`, { method: 'PUT', body: JSON.stringify({ blocked: isActive }) });
+    loadBankUsers();
+  } catch(err) { alert('Failed: ' + err.message); }
+}
 
 // Auto-refresh: 3 seconds when in chat, 8 seconds otherwise
 setInterval(function(){

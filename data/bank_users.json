@@ -1,0 +1,64 @@
+[
+  {
+    "id": "84dffb57-e3f7-4b63-a070-1245673f40bc",
+    "username": "alice",
+    "passwordHash": "b56ac86920c0e240f6bba9369b7f43d86df3bba25ad5bb9d347b7b4d49569ccc",
+    "fullName": "Alice Johnson",
+    "accountNumber": "6644822856",
+    "balance": 400,
+    "status": "active",
+    "createdAt": "2026-04-26T13:02:12.409Z",
+    "card": {
+      "number": "4532317438500809",
+      "expiry": "04/29",
+      "cvv": "408",
+      "holderName": "ALICE JOHNSON",
+      "status": "blocked",
+      "issuedAt": "2026-04-26T13:02:12.433Z"
+    },
+    "transactions": [
+      {
+        "id": "d2dc7014-94c0-44ff-a0a4-f6bb441cdf2e",
+        "type": "credit",
+        "amount": 500,
+        "description": "Welcome bonus",
+        "by": "admin1",
+        "timestamp": "2026-04-26T13:02:12.423Z",
+        "balanceAfter": 500
+      },
+      {
+        "id": "e4e75723-4e6d-4fb8-9fa3-b678a19f6eda",
+        "type": "transfer_out",
+        "amount": 100,
+        "to": "bob",
+        "toName": "Bob Smith",
+        "note": "For lunch",
+        "timestamp": "2026-04-26T13:02:12.428Z",
+        "balanceAfter": 400
+      }
+    ]
+  },
+  {
+    "id": "790ba91c-b637-4f02-975c-62983e64d5f2",
+    "username": "bob",
+    "passwordHash": "d41af5c48c88e3197c4eca3ca1ef27eaa1624b7ea1940adcacc8d5ff1bd312c4",
+    "fullName": "Bob Smith",
+    "accountNumber": "7369281087",
+    "balance": 100,
+    "status": "active",
+    "createdAt": "2026-04-26T13:02:12.417Z",
+    "card": null,
+    "transactions": [
+      {
+        "id": "e4e75723-4e6d-4fb8-9fa3-b678a19f6eda",
+        "type": "transfer_in",
+        "amount": 100,
+        "from": "alice",
+        "fromName": "Alice Johnson",
+        "note": "For lunch",
+        "timestamp": "2026-04-26T13:02:12.428Z",
+        "balanceAfter": 100
+      }
+    ]
+  }
+]

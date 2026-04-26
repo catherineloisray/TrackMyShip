@@ -1,1 +1,40 @@
-[]
+[
+  {
+    "id": "2f2bf9b7-7bc1-4b8d-8133-d5a19cd80d1d",
+    "trackingNumber": "TMS-E776-2555-69",
+    "senderName": "Test",
+    "receiverName": "Test2",
+    "receiverAddress": "LA",
+    "originAddress": "NYC",
+    "packageDescription": "Box",
+    "packageType": "Parcel",
+    "weight": "1",
+    "quantity": 1,
+    "specialInstructions": "",
+    "estimatedDelivery": "",
+    "status": "Picked Up",
+    "createdAt": "2026-04-26T13:02:12.443Z",
+    "originCoords": {
+      "lat": 40.7,
+      "lng": -74
+    },
+    "destCoords": {
+      "lat": 34,
+      "lng": -118.2
+    },
+    "currentLocation": {
+      "lat": 40.7,
+      "lng": -74
+    },
+    "locationHistory": [],
+    "statusHistory": [
+      {
+        "status": "Picked Up",
+        "timestamp": "2026-04-26T13:02:12.443Z",
+        "note": "Shipment created and picked up"
+      }
+    ],
+    "messages": [],
+    "createdBy": "admin1"
+  }
+]

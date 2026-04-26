@@ -6,6 +6,7 @@ const crypto = require('crypto');
 // ─── Configuration ───────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data', 'shipments.json');
+const BANK_FILE = path.join(__dirname, 'data', 'bank_users.json');
 const UPLOADS_DIR = path.join(__dirname, 'data', 'uploads');
 // IMPORTANT: Use a stable key so it survives server restarts on Render.
 const MASTER_SECRET = crypto.createHash('sha256').update('TrackMyShip2026!-stable-admin-key-v1').digest('hex');
@@ -52,6 +53,7 @@ function getAdminByToken(token) {
 if (!fs.existsSync(path.join(__dirname, 'data'))) fs.mkdirSync(path.join(__dirname, 'data'));
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, '[]');
+if (!fs.existsSync(BANK_FILE)) fs.writeFileSync(BANK_FILE, '[]');
 
 function loadShipments() {
   try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); }
@@ -64,6 +66,49 @@ function generateTrackingNumber() {
   const prefix = 'TMS';
   const num = crypto.randomBytes(5).toString('hex').toUpperCase();
   return `${prefix}-${num.slice(0,4)}-${num.slice(4,8)}-${num.slice(8)}`;
+}
+
+// ─── Banking Data Helpers ────────────────────────────────────────
+function loadBankUsers() {
+  try { return JSON.parse(fs.readFileSync(BANK_FILE, 'utf8')); }
+  catch { return []; }
+}
+function saveBankUsers(data) {
+  fs.writeFileSync(BANK_FILE, JSON.stringify(data, null, 2));
+}
+function hashPassword(password) {
+  return crypto.createHash('sha256').update('tms-bank-salt:' + password).digest('hex');
+}
+function generateBankToken(userId) {
+  return crypto.createHmac('sha256', MASTER_SECRET).update('bank-token:' + userId).digest('hex');
+}
+function getBankUserByToken(token) {
+  const users = loadBankUsers();
+  return users.find(u => generateBankToken(u.id) === token) || null;
+}
+function generateCardNumber() {
+  // Generate a 16-digit card number starting with 4 (Visa-style)
+  let num = '4532';
+  for (let i = 0; i < 12; i++) num += Math.floor(Math.random() * 10);
+  return num;
+}
+function formatCardDisplay(num) {
+  return num.replace(/(.{4})/g, '$1 ').trim();
+}
+function generateCVV() {
+  return String(Math.floor(100 + Math.random() * 900));
+}
+function generateExpiry() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = String(now.getFullYear() + 3).slice(2);
+  return month + '/' + year;
+}
+function generateAccountNumber() {
+  // 10-digit account number
+  let num = '';
+  for (let i = 0; i < 10; i++) num += Math.floor(Math.random() * 10);
+  return num;
 }
 
 // ─── Encryption helpers (AES-256-GCM) ───────────────────────────
@@ -282,6 +327,122 @@ const server = http.createServer(async (req, res) => {
     return jsonRes(res, 200, messages);
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  //  VIRTUAL BANKING API — PUBLIC ROUTES
+  // ═══════════════════════════════════════════════════════════════
+
+  // Bank: Register new user
+  if (pathname === '/api/bank/register' && req.method === 'POST') {
+    const body = await parseBody(req);
+    const username = (body.username || '').trim().toLowerCase();
+    const password = body.password || '';
+    const fullName = (body.fullName || '').trim();
+    if (!username || !password || !fullName) return jsonRes(res, 400, { error: 'Username, password, and full name are required' });
+    if (username.length < 3) return jsonRes(res, 400, { error: 'Username must be at least 3 characters' });
+    if (password.length < 6) return jsonRes(res, 400, { error: 'Password must be at least 6 characters' });
+    const users = loadBankUsers();
+    if (users.find(u => u.username === username)) return jsonRes(res, 409, { error: 'Username already taken' });
+    const user = {
+      id: crypto.randomUUID(),
+      username,
+      passwordHash: hashPassword(password),
+      fullName,
+      accountNumber: generateAccountNumber(),
+      balance: 0,
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      card: null,
+      transactions: []
+    };
+    users.push(user);
+    saveBankUsers(users);
+    const token = generateBankToken(user.id);
+    console.log('[BANK] New user registered:', username, '| Account:', user.accountNumber);
+    return jsonRes(res, 201, { token, user: { id: user.id, username: user.username, fullName: user.fullName, accountNumber: user.accountNumber, balance: user.balance, status: user.status, card: user.card } });
+  }
+
+  // Bank: User login
+  if (pathname === '/api/bank/login' && req.method === 'POST') {
+    const body = await parseBody(req);
+    const username = (body.username || '').trim().toLowerCase();
+    const password = body.password || '';
+    const users = loadBankUsers();
+    const user = users.find(u => u.username === username && u.passwordHash === hashPassword(password));
+    if (!user) return jsonRes(res, 401, { error: 'Invalid username or password' });
+    if (user.status === 'blocked') return jsonRes(res, 403, { error: 'Your account has been suspended. Please contact support.' });
+    const token = generateBankToken(user.id);
+    console.log('[BANK] User login:', username);
+    return jsonRes(res, 200, { token, user: { id: user.id, username: user.username, fullName: user.fullName, accountNumber: user.accountNumber, balance: user.balance, status: user.status, card: user.card, createdAt: user.createdAt } });
+  }
+
+  // Bank: Get account info (authenticated)
+  if (pathname === '/api/bank/account' && req.method === 'GET') {
+    const auth = req.headers.authorization;
+    const token = auth ? auth.replace('Bearer ', '') : '';
+    const user = getBankUserByToken(token);
+    if (!user) return jsonRes(res, 403, { error: 'Please log in' });
+    if (user.status === 'blocked') return jsonRes(res, 403, { error: 'Account suspended' });
+    return jsonRes(res, 200, { id: user.id, username: user.username, fullName: user.fullName, accountNumber: user.accountNumber, balance: user.balance, status: user.status, card: user.card, createdAt: user.createdAt, transactions: user.transactions || [] });
+  }
+
+  // Bank: Transfer funds to another user
+  if (pathname === '/api/bank/transfer' && req.method === 'POST') {
+    const auth = req.headers.authorization;
+    const token = auth ? auth.replace('Bearer ', '') : '';
+    const sender = getBankUserByToken(token);
+    if (!sender) return jsonRes(res, 403, { error: 'Please log in' });
+    if (sender.status === 'blocked') return jsonRes(res, 403, { error: 'Account suspended' });
+    const body = await parseBody(req);
+    const recipientUsername = (body.recipientUsername || '').trim().toLowerCase();
+    const recipientAccount = (body.recipientAccount || '').trim();
+    const amount = parseFloat(body.amount);
+    const note = body.note || '';
+    if (!amount || amount <= 0) return jsonRes(res, 400, { error: 'Invalid amount' });
+    if (amount > sender.balance) return jsonRes(res, 400, { error: 'Insufficient funds' });
+    const users = loadBankUsers();
+    const senderIdx = users.findIndex(u => u.id === sender.id);
+    // Find recipient by username OR account number
+    const recipientIdx = users.findIndex(u => (recipientUsername && u.username === recipientUsername) || (recipientAccount && u.accountNumber === recipientAccount));
+    if (recipientIdx === -1) return jsonRes(res, 404, { error: 'Recipient not found' });
+    if (users[recipientIdx].id === sender.id) return jsonRes(res, 400, { error: 'Cannot transfer to yourself' });
+    if (users[recipientIdx].status === 'blocked') return jsonRes(res, 400, { error: 'Recipient account is suspended' });
+    const txId = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
+    // Debit sender
+    users[senderIdx].balance = Math.round((users[senderIdx].balance - amount) * 100) / 100;
+    users[senderIdx].transactions.push({ id: txId, type: 'transfer_out', amount, to: users[recipientIdx].username, toName: users[recipientIdx].fullName, note, timestamp, balanceAfter: users[senderIdx].balance });
+    // Credit recipient
+    users[recipientIdx].balance = Math.round((users[recipientIdx].balance + amount) * 100) / 100;
+    users[recipientIdx].transactions.push({ id: txId, type: 'transfer_in', amount, from: users[senderIdx].username, fromName: users[senderIdx].fullName, note, timestamp, balanceAfter: users[recipientIdx].balance });
+    saveBankUsers(users);
+    console.log('[BANK] Transfer: $' + amount, 'from', sender.username, 'to', users[recipientIdx].username);
+    return jsonRes(res, 200, { success: true, newBalance: users[senderIdx].balance, transactionId: txId });
+  }
+
+  // Bank: Apply for virtual debit card
+  if (pathname === '/api/bank/card/apply' && req.method === 'POST') {
+    const auth = req.headers.authorization;
+    const token = auth ? auth.replace('Bearer ', '') : '';
+    const user = getBankUserByToken(token);
+    if (!user) return jsonRes(res, 403, { error: 'Please log in' });
+    if (user.status === 'blocked') return jsonRes(res, 403, { error: 'Account suspended' });
+    if (user.card) return jsonRes(res, 400, { error: 'You already have a virtual debit card' });
+    const users = loadBankUsers();
+    const idx = users.findIndex(u => u.id === user.id);
+    const card = {
+      number: generateCardNumber(),
+      expiry: generateExpiry(),
+      cvv: generateCVV(),
+      holderName: user.fullName.toUpperCase(),
+      status: 'active',
+      issuedAt: new Date().toISOString()
+    };
+    users[idx].card = card;
+    saveBankUsers(users);
+    console.log('[BANK] Debit card issued for', user.username);
+    return jsonRes(res, 200, { success: true, card });
+  }
+
   // ─── PUBLIC: Serve uploaded files ──────────────────────────────
   if (pathname.startsWith('/api/files/') && req.method === 'GET') {
     const fileId = pathname.split('/')[3];
@@ -493,6 +654,98 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ═══════════════════════════════════════════════════════════════
+  //  ADMIN BANKING MANAGEMENT
+  // ═══════════════════════════════════════════════════════════════
+
+  // Admin: List all bank users
+  if (pathname === `${ADMIN_PATH}/api/bank/users` && req.method === 'GET') {
+    const users = loadBankUsers();
+    const safe = users.map(u => ({ id: u.id, username: u.username, fullName: u.fullName, accountNumber: u.accountNumber, balance: u.balance, status: u.status, card: u.card, createdAt: u.createdAt, transactionCount: (u.transactions || []).length }));
+    return jsonRes(res, 200, safe);
+  }
+
+  // Admin: Get single bank user with transactions
+  if (pathname.startsWith(`${ADMIN_PATH}/api/bank/users/`) && pathname.split('/').length === 6 && req.method === 'GET') {
+    const userId = pathname.split('/')[5];
+    const users = loadBankUsers();
+    const user = users.find(u => u.id === userId);
+    if (!user) return jsonRes(res, 404, { error: 'User not found' });
+    return jsonRes(res, 200, { id: user.id, username: user.username, fullName: user.fullName, accountNumber: user.accountNumber, balance: user.balance, status: user.status, card: user.card, createdAt: user.createdAt, transactions: user.transactions || [] });
+  }
+
+  // Admin: Fund a user's account
+  if (pathname.startsWith(`${ADMIN_PATH}/api/bank/users/`) && pathname.endsWith('/fund') && req.method === 'POST') {
+    const parts = pathname.split('/');
+    const userId = parts[5];
+    const body = await parseBody(req);
+    const amount = parseFloat(body.amount);
+    const note = body.note || 'Admin deposit';
+    if (!amount || amount <= 0) return jsonRes(res, 400, { error: 'Invalid amount' });
+    const users = loadBankUsers();
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx === -1) return jsonRes(res, 404, { error: 'User not found' });
+    users[idx].balance = Math.round((users[idx].balance + amount) * 100) / 100;
+    users[idx].transactions.push({
+      id: crypto.randomUUID(), type: 'credit', amount, description: note,
+      by: currentAdmin.id, timestamp: new Date().toISOString(), balanceAfter: users[idx].balance
+    });
+    saveBankUsers(users);
+    console.log('[BANK] Admin', currentAdmin.id, 'funded', users[idx].username, '+$' + amount);
+    return jsonRes(res, 200, { success: true, newBalance: users[idx].balance });
+  }
+
+  // Admin: Debit (withdraw) from user's account
+  if (pathname.startsWith(`${ADMIN_PATH}/api/bank/users/`) && pathname.endsWith('/debit') && req.method === 'POST') {
+    const parts = pathname.split('/');
+    const userId = parts[5];
+    const body = await parseBody(req);
+    const amount = parseFloat(body.amount);
+    const note = body.note || 'Admin withdrawal';
+    if (!amount || amount <= 0) return jsonRes(res, 400, { error: 'Invalid amount' });
+    const users = loadBankUsers();
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx === -1) return jsonRes(res, 404, { error: 'User not found' });
+    if (amount > users[idx].balance) return jsonRes(res, 400, { error: 'Insufficient funds in account' });
+    users[idx].balance = Math.round((users[idx].balance - amount) * 100) / 100;
+    users[idx].transactions.push({
+      id: crypto.randomUUID(), type: 'debit', amount, description: note,
+      by: currentAdmin.id, timestamp: new Date().toISOString(), balanceAfter: users[idx].balance
+    });
+    saveBankUsers(users);
+    console.log('[BANK] Admin', currentAdmin.id, 'debited', users[idx].username, '-$' + amount);
+    return jsonRes(res, 200, { success: true, newBalance: users[idx].balance });
+  }
+
+  // Admin: Block/unblock user's debit card (must come BEFORE /block check)
+  if (pathname.startsWith(`${ADMIN_PATH}/api/bank/users/`) && pathname.endsWith('/card/block') && req.method === 'PUT') {
+    const parts = pathname.split('/');
+    const userId = parts[5];
+    const body = await parseBody(req);
+    const users = loadBankUsers();
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx === -1) return jsonRes(res, 404, { error: 'User not found' });
+    if (!users[idx].card) return jsonRes(res, 400, { error: 'User has no debit card' });
+    users[idx].card.status = body.blocked ? 'blocked' : 'active';
+    saveBankUsers(users);
+    console.log('[BANK] Admin', currentAdmin.id, body.blocked ? 'blocked' : 'unblocked', 'card for', users[idx].username);
+    return jsonRes(res, 200, { success: true, cardStatus: users[idx].card.status });
+  }
+
+  // Admin: Block/unblock user account
+  if (pathname.startsWith(`${ADMIN_PATH}/api/bank/users/`) && pathname.endsWith('/block') && req.method === 'PUT') {
+    const parts = pathname.split('/');
+    const userId = parts[5];
+    const body = await parseBody(req);
+    const users = loadBankUsers();
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx === -1) return jsonRes(res, 404, { error: 'User not found' });
+    users[idx].status = body.blocked ? 'blocked' : 'active';
+    saveBankUsers(users);
+    console.log('[BANK] Admin', currentAdmin.id, body.blocked ? 'blocked' : 'unblocked', 'user', users[idx].username);
+    return jsonRes(res, 200, { success: true, status: users[idx].status });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   //  STATIC FILE SERVING
   // ═══════════════════════════════════════════════════════════════
   if (pathname === ADMIN_PATH || pathname === `${ADMIN_PATH}/`) {
@@ -503,6 +756,11 @@ const server = http.createServer(async (req, res) => {
     return serveFile(path.join(__dirname, 'admin', filePath), res);
   }
   if (pathname.startsWith('/admin')) { res.writeHead(404); res.end('Not Found'); return; }
+
+  // Serve banking portal
+  if (pathname === '/bank' || pathname === '/bank/') {
+    return serveFile(path.join(__dirname, 'public', 'bank.html'), res);
+  }
 
   let filePath = pathname === '/' ? '/index.html' : pathname;
   serveFile(path.join(__dirname, 'public', filePath), res);

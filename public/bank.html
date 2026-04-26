@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrackMyShip — Virtual Banking</title>
+<style>
+:root{--primary:#0a2463;--primary-light:#1e3a8a;--accent:#3b82f6;--success:#10b981;--warning:#f59e0b;--danger:#ef4444;--bg:#f8fafc;--surface:#ffffff;--surface-alt:#f1f5f9;--text:#0f172a;--text-dim:#64748b;--border:#e2e8f0;--radius:12px;--shadow:0 4px 24px rgba(0,0,0,.06);--gold:#d4a843;--gold-light:#f5e6c8}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+a{text-decoration:none;color:inherit}
+
+.header{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-light) 100%);color:#fff;padding:0}
+.header-inner{max-width:1200px;margin:0 auto;padding:20px 24px;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:12px;font-size:22px;font-weight:700}
+.header-nav{display:flex;gap:24px;font-size:14px;align-items:center}
+.header-nav a{color:rgba(255,255,255,.8);transition:color .2s}
+.header-nav a:hover{color:#fff}
+.header-nav .btn-logout{padding:8px 16px;background:rgba(255,255,255,.15);border-radius:8px;cursor:pointer;border:none;color:#fff;font-size:14px}
+.header-nav .btn-logout:hover{background:rgba(255,255,255,.25)}
+
+/* Auth Screen */
+.auth-screen{min-height:calc(100vh - 72px);display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0a2463 0%,#1e3a8a 50%,#0f172a 100%);padding:24px}
+.auth-box{background:var(--surface);padding:40px;border-radius:16px;width:440px;box-shadow:0 25px 60px rgba(0,0,0,.2)}
+.auth-box h1{font-size:28px;color:var(--primary);margin-bottom:8px}
+.auth-box .subtitle{color:var(--text-dim);margin-bottom:28px;font-size:14px}
+.auth-box .logo-icon{font-size:42px;margin-bottom:12px;display:block}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;margin-bottom:6px;font-size:13px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.form-group input{width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius);font-size:15px;outline:none;transition:border .2s;color:var(--text)}
+.form-group input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.btn{padding:12px 24px;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#2563eb}
+.btn-success{background:var(--success);color:#fff}.btn-success:hover{background:#059669}
+.error-msg{color:var(--danger);font-size:13px;margin-top:8px;display:none}
+.auth-toggle{text-align:center;margin-top:20px;font-size:14px;color:var(--text-dim)}
+.auth-toggle a{color:var(--accent);font-weight:600;cursor:pointer}
+.auth-toggle a:hover{text-decoration:underline}
+
+/* Dashboard */
+.dashboard{display:none;max-width:1200px;margin:0 auto;padding:32px 24px}
+.welcome{margin-bottom:32px}
+.welcome h1{font-size:28px;margin-bottom:4px}
+.welcome p{color:var(--text-dim);font-size:14px}
+
+/* Balance Card */
+.balance-card{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-light) 60%,#2563eb 100%);color:#fff;border-radius:16px;padding:32px;margin-bottom:24px;box-shadow:0 12px 40px rgba(10,36,99,.3)}
+.balance-label{font-size:13px;opacity:.7;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.balance-amount{font-size:48px;font-weight:800;margin-bottom:8px}
+.balance-account{font-size:14px;opacity:.6}
+.balance-actions{display:flex;gap:12px;margin-top:20px}
+.balance-actions button{padding:10px 20px;border-radius:10px;border:none;font-weight:600;font-size:14px;cursor:pointer;transition:all .2s}
+.btn-transfer{background:rgba(255,255,255,.2);color:#fff;backdrop-filter:blur(4px)}
+.btn-transfer:hover{background:rgba(255,255,255,.35)}
+.btn-card{background:var(--gold);color:#000}
+.btn-card:hover{background:#c49a38}
+
+/* Grid */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
+@media(max-width:768px){.grid{grid-template-columns:1fr}}
+
+/* Cards */
+.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.card-header{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;padding:16px 20px;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600}
+.card-body{padding:20px}
+
+/* Debit Card Visual */
+.debit-card{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);color:#fff;border-radius:14px;padding:28px;position:relative;overflow:hidden;min-height:200px;display:flex;flex-direction:column;justify-content:space-between}
+.debit-card::before{content:'';position:absolute;right:-30px;top:-30px;width:150px;height:150px;border-radius:50%;background:rgba(212,168,67,.15)}
+.debit-card::after{content:'';position:absolute;right:20px;bottom:20px;width:80px;height:80px;border-radius:50%;background:rgba(59,130,246,.1)}
+.card-chip{width:40px;height:30px;background:linear-gradient(135deg,var(--gold),#b8860b);border-radius:6px;margin-bottom:20px;display:flex;align-items:center;justify-content:center}
+.card-chip::after{content:'';width:24px;height:18px;border:1px solid rgba(0,0,0,.2);border-radius:3px}
+.card-number{font-size:22px;letter-spacing:3px;font-family:'Courier New',monospace;margin-bottom:20px;position:relative}
+.card-bottom{display:flex;justify-content:space-between;align-items:flex-end;position:relative}
+.card-holder{font-size:12px;text-transform:uppercase;letter-spacing:1px}
+.card-holder span{display:block;font-size:14px;font-weight:600;margin-top:2px}
+.card-expiry{text-align:right}
+.card-expiry .label{font-size:10px;opacity:.6}
+.card-expiry span{display:block;font-size:14px;font-weight:600}
+.card-cvv{margin-top:12px;font-size:13px;opacity:.7}
+.card-brand{position:absolute;top:24px;right:24px;font-size:20px;font-weight:800;opacity:.8;letter-spacing:2px}
+.card-status-blocked{position:absolute;inset:0;background:rgba(239,68,68,.85);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;letter-spacing:4px;border-radius:14px}
+.no-card{text-align:center;padding:40px 20px;color:var(--text-dim)}
+.no-card p{margin-bottom:16px;font-size:14px}
+.no-card button{padding:12px 28px;background:var(--gold);color:#000;border:none;border-radius:var(--radius);font-weight:700;font-size:15px;cursor:pointer}
+.no-card button:hover{background:#c49a38}
+
+/* Transfer Form */
+.transfer-form{display:none;margin-bottom:24px}
+.transfer-form .card-body{padding:24px}
+.transfer-form .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.transfer-form .form-group input{background:var(--surface-alt)}
+.transfer-result{padding:12px 16px;border-radius:8px;margin-top:12px;font-size:14px;display:none}
+.transfer-result.success{background:#d1fae5;color:#065f46;display:block}
+.transfer-result.error{background:#fecaca;color:#991b1b;display:block}
+
+/* Transactions */
+.tx-list{max-height:400px;overflow-y:auto}
+.tx-item{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border)}
+.tx-item:last-child{border-bottom:none}
+.tx-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-right:12px;flex-shrink:0}
+.tx-icon.credit{background:#d1fae5;color:#065f46}
+.tx-icon.debit{background:#fecaca;color:#991b1b}
+.tx-icon.transfer_in{background:#dbeafe;color:#1d4ed8}
+.tx-icon.transfer_out{background:#fef3c7;color:#92400e}
+.tx-info{flex:1}
+.tx-info h4{font-size:14px;font-weight:600;margin-bottom:2px}
+.tx-info p{font-size:12px;color:var(--text-dim)}
+.tx-amount{font-size:15px;font-weight:700;text-align:right}
+.tx-amount.positive{color:var(--success)}
+.tx-amount.negative{color:var(--danger)}
+.tx-balance{font-size:11px;color:var(--text-dim);text-align:right}
+.empty-tx{text-align:center;padding:40px;color:var(--text-dim);font-size:14px}
+
+.footer{text-align:center;padding:32px 24px;font-size:13px;color:var(--text-dim)}
+.footer strong{color:var(--text)}
+
+@media(max-width:768px){
+  .auth-box{width:calc(100vw - 32px);padding:28px}
+  .balance-amount{font-size:36px}
+  .card-number{font-size:18px}
+  .transfer-form .form-row{grid-template-columns:1fr}
+  .balance-actions{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <a href="/" class="logo">
+      <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      TrackMyShip
+    </a>
+    <nav class="header-nav">
+      <a href="/">Track Package</a>
+      <a href="/bank" style="color:#fff;font-weight:600">Banking</a>
+      <button class="btn-logout" id="logoutBtn" style="display:none" onclick="doLogout()">Logout</button>
+    </nav>
+  </div>
+</header>
+
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-box">
+    <span class="logo-icon">🏦</span>
+    <h1 id="authTitle">Virtual Banking</h1>
+    <p class="subtitle" id="authSubtitle">Sign in to access your virtual account</p>
+
+    <div id="loginForm">
+      <div class="form-group"><label>Username</label><input type="text" id="loginUser" placeholder="Enter your username" autocomplete="off"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="loginPass" placeholder="Enter your password"></div>
+      <div class="error-msg" id="loginError"></div>
+      <button class="btn btn-primary" onclick="doLogin()" style="margin-top:8px">Sign In</button>
+      <div class="auth-toggle">Don't have an account? <a onclick="showRegister()">Sign Up</a></div>
+    </div>
+
+    <div id="registerForm" style="display:none">
+      <div class="form-group"><label>Full Name</label><input type="text" id="regName" placeholder="Your full legal name" autocomplete="off"></div>
+      <div class="form-group"><label>Username</label><input type="text" id="regUser" placeholder="Choose a username" autocomplete="off"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="regPass" placeholder="At least 6 characters"></div>
+      <div class="error-msg" id="regError"></div>
+      <button class="btn btn-success" onclick="doRegister()" style="margin-top:8px">Create Account</button>
+      <div class="auth-toggle">Already have an account? <a onclick="showLogin()">Sign In</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dashboard" id="dashboard">
+  <div class="welcome">
+    <h1 id="welcomeName">Welcome back</h1>
+    <p>Manage your virtual banking account</p>
+  </div>
+
+  <!-- Balance -->
+  <div class="balance-card">
+    <div class="balance-label">Available Balance</div>
+    <div class="balance-amount" id="balanceDisplay">$0.00</div>
+    <div class="balance-account">Account: <span id="accountNum">—</span></div>
+    <div class="balance-actions">
+      <button class="btn-transfer" onclick="toggleTransfer()">Send Money</button>
+      <button class="btn-card" id="cardActionBtn" onclick="applyForCard()">Apply for Debit Card</button>
+    </div>
+  </div>
+
+  <!-- Transfer Form -->
+  <div class="transfer-form card" id="transferSection">
+    <div class="card-header">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+      Send Money
+    </div>
+    <div class="card-body">
+      <div class="transfer-form-inner">
+        <div class="form-row">
+          <div class="form-group"><label>Recipient Username or Account #</label><input type="text" id="txRecipient" placeholder="Username or account number"></div>
+          <div class="form-group"><label>Amount ($)</label><input type="number" id="txAmount" placeholder="0.00" step="0.01" min="0.01"></div>
+        </div>
+        <div class="form-group"><label>Note (optional)</label><input type="text" id="txNote" placeholder="What's this for?"></div>
+        <div style="display:flex;gap:12px;margin-top:8px">
+          <button class="btn btn-primary" onclick="sendTransfer()" style="flex:1">Send Transfer</button>
+          <button class="btn" onclick="toggleTransfer()" style="flex:0;background:var(--surface-alt);color:var(--text)">Cancel</button>
+        </div>
+        <div class="transfer-result" id="transferResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- Debit Card -->
+    <div class="card">
+      <div class="card-header">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+        Virtual Debit Card
+      </div>
+      <div class="card-body" id="cardContainer">
+        <div class="no-card" id="noCard">
+          <p>You don't have a virtual debit card yet.</p>
+          <button onclick="applyForCard()">Apply Now</button>
+        </div>
+        <div id="cardVisual" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Quick Info -->
+    <div class="card">
+      <div class="card-header">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        Account Details
+      </div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div><span style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px">Full Name</span><div style="font-size:15px;font-weight:600;margin-top:2px" id="infoName">—</div></div>
+          <div><span style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px">Username</span><div style="font-size:15px;font-weight:600;margin-top:2px" id="infoUsername">—</div></div>
+          <div><span style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px">Account Number</span><div style="font-size:15px;font-weight:600;margin-top:2px" id="infoAccount">—</div></div>
+          <div><span style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px">Account Status</span><div style="font-size:15px;font-weight:600;margin-top:2px" id="infoStatus">—</div></div>
+          <div><span style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px">Member Since</span><div style="font-size:15px;font-weight:600;margin-top:2px" id="infoSince">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transactions -->
+  <div class="card">
+    <div class="card-header">
+      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Transaction History
+    </div>
+    <div class="card-body">
+      <div class="tx-list" id="txList">
+        <div class="empty-tx">No transactions yet. Your transaction history will appear here.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <p><strong>TrackMyShip</strong> — Virtual Banking Portal</p>
+  <p style="margin-top:4px">This is a virtual wallet system. Not connected to any real bank.</p>
+</footer>
+
+<script>
+var bankToken = null;
+var currentUser = null;
+var API = '';
+
+// ─── Auth ─────────────────────
+function showLogin() {
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('registerForm').style.display = 'none';
+  document.getElementById('authTitle').textContent = 'Virtual Banking';
+  document.getElementById('authSubtitle').textContent = 'Sign in to access your virtual account';
+}
+function showRegister() {
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'block';
+  document.getElementById('authTitle').textContent = 'Create Account';
+  document.getElementById('authSubtitle').textContent = 'Open your free virtual banking account';
+}
+
+function doLogin() {
+  var user = document.getElementById('loginUser').value.trim();
+  var pass = document.getElementById('loginPass').value;
+  if (!user || !pass) { showError('loginError', 'Please enter username and password'); return; }
+  fetch(API + '/api/bank/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password: pass }) })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (!res.ok) { showError('loginError', res.data.error || 'Login failed'); return; }
+      bankToken = res.data.token;
+      currentUser = res.data.user;
+      enterDashboard();
+    })
+    .catch(function() { showError('loginError', 'Connection failed. Please try again.'); });
+}
+
+function doRegister() {
+  var name = document.getElementById('regName').value.trim();
+  var user = document.getElementById('regUser').value.trim();
+  var pass = document.getElementById('regPass').value;
+  if (!name || !user || !pass) { showError('regError', 'All fields are required'); return; }
+  fetch(API + '/api/bank/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fullName: name, username: user, password: pass }) })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (!res.ok) { showError('regError', res.data.error || 'Registration failed'); return; }
+      bankToken = res.data.token;
+      currentUser = res.data.user;
+      enterDashboard();
+    })
+    .catch(function() { showError('regError', 'Connection failed. Please try again.'); });
+}
+
+function doLogout() {
+  bankToken = null;
+  currentUser = null;
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  showLogin();
+}
+
+function showError(id, msg) {
+  var el = document.getElementById(id);
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(function() { el.style.display = 'none'; }, 5000);
+}
+
+// ─── Dashboard ────────────────
+function enterDashboard() {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('logoutBtn').style.display = 'block';
+  refreshAccount();
+}
+
+function refreshAccount() {
+  if (!bankToken) return;
+  fetch(API + '/api/bank/account', { headers: { 'Authorization': 'Bearer ' + bankToken } })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (!res.ok) { if (res.data.error === 'Account suspended') { alert('Your account has been suspended.'); doLogout(); } return; }
+      currentUser = res.data;
+      renderDashboard();
+    })
+    .catch(function(err) { console.error('Refresh error:', err); });
+}
+
+function renderDashboard() {
+  var u = currentUser;
+  document.getElementById('welcomeName').textContent = 'Welcome, ' + u.fullName.split(' ')[0];
+  document.getElementById('balanceDisplay').textContent = '$' + u.balance.toFixed(2);
+  document.getElementById('accountNum').textContent = u.accountNumber;
+  document.getElementById('infoName').textContent = u.fullName;
+  document.getElementById('infoUsername').textContent = u.username;
+  document.getElementById('infoAccount').textContent = u.accountNumber;
+  document.getElementById('infoStatus').innerHTML = u.status === 'active' ? '<span style="color:var(--success)">Active</span>' : '<span style="color:var(--danger)">Blocked</span>';
+  document.getElementById('infoSince').textContent = new Date(u.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Card
+  if (u.card) {
+    document.getElementById('noCard').style.display = 'none';
+    document.getElementById('cardVisual').style.display = 'block';
+    document.getElementById('cardActionBtn').textContent = 'View Card';
+    document.getElementById('cardActionBtn').onclick = function() { document.querySelector('.grid').scrollIntoView({ behavior: 'smooth' }); };
+    var blocked = u.card.status === 'blocked';
+    document.getElementById('cardVisual').innerHTML =
+      '<div class="debit-card">' +
+        (blocked ? '<div class="card-status-blocked">BLOCKED</div>' : '') +
+        '<div class="card-brand">VIRTUAL</div>' +
+        '<div class="card-chip"></div>' +
+        '<div class="card-number">' + formatCard(u.card.number) + '</div>' +
+        '<div class="card-bottom">' +
+          '<div class="card-holder"><span>' + u.card.holderName + '</span>CARDHOLDER</div>' +
+          '<div class="card-expiry"><div class="label">VALID THRU</div><span>' + u.card.expiry + '</span></div>' +
+        '</div>' +
+        '<div class="card-cvv">CVV: ' + u.card.cvv + '</div>' +
+      '</div>';
+  } else {
+    document.getElementById('noCard').style.display = 'block';
+    document.getElementById('cardVisual').style.display = 'none';
+    document.getElementById('cardActionBtn').textContent = 'Apply for Debit Card';
+    document.getElementById('cardActionBtn').onclick = applyForCard;
+  }
+
+  // Transactions
+  renderTransactions(u.transactions || []);
+}
+
+function formatCard(num) {
+  return num.replace(/(.{4})/g, '$1 ').trim();
+}
+
+function renderTransactions(txs) {
+  var el = document.getElementById('txList');
+  if (!txs.length) { el.innerHTML = '<div class="empty-tx">No transactions yet. Your transaction history will appear here.</div>'; return; }
+  var reversed = txs.slice().reverse();
+  el.innerHTML = reversed.map(function(tx) {
+    var icon = ''; var label = ''; var amtClass = '';
+    if (tx.type === 'credit') { icon = 'credit'; label = tx.description || 'Deposit'; amtClass = 'positive'; }
+    else if (tx.type === 'debit') { icon = 'debit'; label = tx.description || 'Withdrawal'; amtClass = 'negative'; }
+    else if (tx.type === 'transfer_in') { icon = 'transfer_in'; label = 'From ' + (tx.fromName || tx.from); amtClass = 'positive'; }
+    else if (tx.type === 'transfer_out') { icon = 'transfer_out'; label = 'To ' + (tx.toName || tx.to); amtClass = 'negative'; }
+    var iconEmoji = tx.type === 'credit' ? '+' : tx.type === 'debit' ? '-' : tx.type === 'transfer_in' ? '<' : '>';
+    var sign = (tx.type === 'credit' || tx.type === 'transfer_in') ? '+' : '-';
+    return '<div class="tx-item">' +
+      '<div class="tx-icon ' + icon + '">' + iconEmoji + '</div>' +
+      '<div class="tx-info"><h4>' + label + '</h4><p>' + new Date(tx.timestamp).toLocaleString() + (tx.note ? ' — ' + tx.note : '') + '</p></div>' +
+      '<div><div class="tx-amount ' + amtClass + '">' + sign + '$' + tx.amount.toFixed(2) + '</div><div class="tx-balance">Bal: $' + tx.balanceAfter.toFixed(2) + '</div></div>' +
+    '</div>';
+  }).join('');
+}
+
+// ─── Transfer ─────────────────
+function toggleTransfer() {
+  var el = document.getElementById('transferSection');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('transferResult').className = 'transfer-result';
+  document.getElementById('transferResult').style.display = 'none';
+}
+
+function sendTransfer() {
+  var recipient = document.getElementById('txRecipient').value.trim();
+  var amount = parseFloat(document.getElementById('txAmount').value);
+  var note = document.getElementById('txNote').value.trim();
+  if (!recipient) { showTransferResult('error', 'Please enter a recipient'); return; }
+  if (!amount || amount <= 0) { showTransferResult('error', 'Please enter a valid amount'); return; }
+
+  var body = { amount: amount, note: note };
+  if (/^\d+$/.test(recipient)) { body.recipientAccount = recipient; }
+  else { body.recipientUsername = recipient; }
+
+  fetch(API + '/api/bank/transfer', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bankToken }, body: JSON.stringify(body) })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (!res.ok) { showTransferResult('error', res.data.error || 'Transfer failed'); return; }
+      showTransferResult('success', 'Transfer sent successfully. New balance: $' + res.data.newBalance.toFixed(2));
+      document.getElementById('txRecipient').value = '';
+      document.getElementById('txAmount').value = '';
+      document.getElementById('txNote').value = '';
+      refreshAccount();
+    })
+    .catch(function() { showTransferResult('error', 'Connection failed'); });
+}
+
+function showTransferResult(type, msg) {
+  var el = document.getElementById('transferResult');
+  el.textContent = msg;
+  el.className = 'transfer-result ' + type;
+  el.style.display = 'block';
+}
+
+// ─── Debit Card ───────────────
+function applyForCard() {
+  if (currentUser && currentUser.card) { document.querySelector('.grid').scrollIntoView({ behavior: 'smooth' }); return; }
+  if (!confirm('Apply for a virtual debit card?')) return;
+  fetch(API + '/api/bank/card/apply', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bankToken } })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (!res.ok) { alert(res.data.error || 'Failed to apply'); return; }
+      alert('Your virtual debit card has been issued!');
+      refreshAccount();
+    })
+    .catch(function() { alert('Connection failed'); });
+}
+
+// ─── Auto-refresh every 10s ───
+setInterval(function() { if (bankToken) refreshAccount(); }, 10000);
+
+// Enter key handlers
+document.getElementById('loginPass').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+document.getElementById('regPass').addEventListener('keydown', function(e) { if (e.key === 'Enter') doRegister(); });
+</script>
+</body>
+</html>
