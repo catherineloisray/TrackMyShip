@@ -100,6 +100,26 @@ tr:hover td{background:rgba(255,255,255,.03)}
 .chat-input .attach-btn{padding:10px;background:var(--surface2);border:none;border-radius:var(--radius);cursor:pointer;color:var(--text-dim);display:flex;align-items:center}
 .chat-input .attach-btn:hover{background:var(--border);color:var(--text)}
 .chat-input input[type="file"]{display:none}
+
+/* ─── Mobile Menu Toggle ─── */
+.menu-toggle{display:none;position:fixed;top:16px;left:16px;z-index:200;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-size:20px;line-height:1;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:90}
+.sidebar-overlay.show{display:block}
+
+@media(max-width:768px){
+  .menu-toggle{display:block}
+  .sidebar{transform:translateX(-100%);transition:transform .3s ease;width:260px}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0;padding:16px;padding-top:60px}
+  .topbar{flex-direction:column;align-items:flex-start;gap:8px}
+  .topbar h1{font-size:20px}
+  .stats{grid-template-columns:repeat(2,1fr);gap:12px}
+  .form-row{grid-template-columns:1fr!important}
+  .modal{width:calc(100vw - 32px)!important;padding:20px}
+  table{font-size:12px}
+  td,th{padding:10px 8px}
+  .gps-info{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -117,7 +137,9 @@ tr:hover td{background:rgba(255,255,255,.03)}
 </div>
 
 <div class="dashboard" id="dashboard">
-  <div class="sidebar">
+  <button class="menu-toggle" id="menuToggle" onclick="toggleMobileMenu()">&#9776;</button>
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileMenu()"></div>
+  <div class="sidebar" id="sidebar">
     <div class="brand"><h2>📦 TrackHub</h2><span>Logged in as <strong id="adminNameDisplay">—</strong></span></div>
     <nav>
       <a href="#" class="active" onclick="showSection('overview')">
@@ -528,6 +550,14 @@ function handleFileSelect(e) {
   e.target.value = '';
 }
 
+// ─── Mobile Menu ──────────────
+function toggleMobileMenu() {
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('show');
+}
+
 // ─── Navigation ────────────────
 function showSection(name) {
   document.querySelectorAll('[id^="section"]').forEach(el=>el.classList.add('hidden'));
@@ -544,6 +574,11 @@ function showSection(name) {
   if(name==='messages'){document.getElementById('chatConversation').classList.add('hidden');document.getElementById('chatListView').classList.remove('hidden');renderChatList();}
   if(name==='banking') loadBankUsers();
   if(name==='bankChats') loadBankChatList();
+  // Close mobile menu on nav click
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  if(sidebar) sidebar.classList.remove('open');
+  if(overlay) overlay.classList.remove('show');
 }
 
 // ─── Maps ──────────────────────
