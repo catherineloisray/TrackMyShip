@@ -127,6 +127,34 @@ function saveBankChats(data) {
 function deriveKey(trackingNumber) {
   return crypto.createHash('sha256').update(MASTER_SECRET + trackingNumber + 'e2e-chat').digest();
 }
+// Bank chat encryption key derived from userId
+function deriveBankChatKey(userId) {
+  return crypto.createHash('sha256').update(MASTER_SECRET + userId + 'bank-e2e-chat').digest();
+}
+function encryptBankMsg(text, userId) {
+  if (!text) return '';
+  const key = deriveBankChatKey(userId);
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  let encrypted = cipher.update(text, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const tag = cipher.getAuthTag().toString('hex');
+  return iv.toString('hex') + ':' + tag + ':' + encrypted;
+}
+function decryptBankMsg(encryptedStr, userId) {
+  if (!encryptedStr) return '';
+  try {
+    const key = deriveBankChatKey(userId);
+    const [ivHex, tagHex, data] = encryptedStr.split(':');
+    const iv = Buffer.from(ivHex, 'hex');
+    const tag = Buffer.from(tagHex, 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    let decrypted = decipher.update(data, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch { return '[Unable to decrypt]'; }
+}
 function encryptMessage(text, trackingNumber) {
   const key = deriveKey(trackingNumber);
   const iv = crypto.randomBytes(12);
@@ -473,7 +501,7 @@ const server = http.createServer(async (req, res) => {
       username: user.username,
       fullName: user.fullName,
       sender: 'user',
-      text: text,
+      text: text ? encryptBankMsg(text, user.id) : '',
       imageData: imageData,
       imageName: imageName,
       timestamp: new Date().toISOString(),
@@ -497,7 +525,11 @@ const server = http.createServer(async (req, res) => {
     let changed = false;
     chats.forEach(function(m) { if (m.userId === user.id && m.sender === 'admin' && !m.read) { m.read = true; changed = true; } });
     if (changed) saveBankChats(chats);
-    return jsonRes(res, 200, userMsgs);
+    // Decrypt messages before sending to client
+    const decrypted = userMsgs.map(function(m) {
+      return Object.assign({}, m, { text: m.text ? decryptBankMsg(m.text, user.id) : '' });
+    });
+    return jsonRes(res, 200, decrypted);
   }
 
   // ─── PUBLIC: Serve uploaded files ──────────────────────────────
@@ -815,7 +847,9 @@ const server = http.createServer(async (req, res) => {
       if (m.sender === 'user' && !m.read) userMap[m.userId].unreadCount++;
     });
     const conversations = Object.values(userMap).map(function(c) {
-      return { userId: c.userId, username: c.username, fullName: c.fullName, unreadCount: c.unreadCount, lastMessage: c.messages[c.messages.length - 1], messageCount: c.messages.length };
+      const lastMsg = c.messages[c.messages.length - 1];
+      const decryptedLast = Object.assign({}, lastMsg, { text: lastMsg.text ? decryptBankMsg(lastMsg.text, c.userId) : '' });
+      return { userId: c.userId, username: c.username, fullName: c.fullName, unreadCount: c.unreadCount, lastMessage: decryptedLast, messageCount: c.messages.length };
     });
     conversations.sort(function(a, b) { return new Date(b.lastMessage.timestamp) - new Date(a.lastMessage.timestamp); });
     return jsonRes(res, 200, conversations);
@@ -830,7 +864,11 @@ const server = http.createServer(async (req, res) => {
     let changed = false;
     chats.forEach(function(m) { if (m.userId === userId && m.sender === 'user' && !m.read) { m.read = true; changed = true; } });
     if (changed) saveBankChats(chats);
-    return jsonRes(res, 200, userMsgs);
+    // Decrypt messages before sending to admin
+    const decrypted = userMsgs.map(function(m) {
+      return Object.assign({}, m, { text: m.text ? decryptBankMsg(m.text, userId) : '' });
+    });
+    return jsonRes(res, 200, decrypted);
   }
 
   // ─── Admin: Send message to bank user ─────────────────────────
@@ -853,7 +891,7 @@ const server = http.createServer(async (req, res) => {
       fullName: user.fullName,
       sender: 'admin',
       adminId: currentAdmin.id,
-      text: text,
+      text: text ? encryptBankMsg(text, userId) : '',
       imageData: imageData,
       imageName: imageName,
       timestamp: new Date().toISOString(),
